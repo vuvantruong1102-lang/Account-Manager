@@ -184,10 +184,9 @@ export function exportQuotePDF(quote) {
   })
   const noteEndY = ny // mốc kết thúc khối Lưu ý (dòng "Liên hệ: Mr. Trường...")
 
-  // ===== Phần ký — nằm DƯỚI toàn bộ khối Lưu ý, thấp hơn ~1cm, căn TRÁI =====
-  // Mép trái đặt ngang vị trí chữ "Đại diện bên bán" cũ (khoảng nửa phải trang)
-  const sigLeftX = W - M - 75
-  const sigValX = sigLeftX + 30 // cột giá trị thẳng hàng
+  // ===== Phần ký — nằm DƯỚI khối Lưu ý ~1cm, căn về LỀ TRÁI (thẳng hàng "Lưu ý") =====
+  const sigLeftX = M
+  const sigValX = sigLeftX + 32 // cột giá trị thẳng hàng
   let sigY = noteEndY + 10 // 10mm ≈ 1cm dưới dòng cuối phần Lưu ý
 
   // Dòng "Người làm báo giá:" — giá trị in đậm
