@@ -30,11 +30,8 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-paper px-4">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,#fde6e9_0%,transparent_45%)]" />
       <div className="w-full max-w-md">
-        <div className="mb-8 flex items-center justify-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white">
-            <span className="font-display text-xl font-700">R</span>
-          </div>
-          <span className="font-display text-2xl font-700 text-ink">TechGift CRM</span>
+        <div className="mb-8 flex items-center justify-center">
+          <img src="/logo-mark.png" alt="Yokool" className="h-10 w-auto" />
         </div>
 
         <div className="card p-8 animate-rise">

@@ -32,6 +32,23 @@ export default function Quotes() {
   }
   useEffect(() => { load() }, [])
 
+  // Nhận prefill khi điều hướng từ panel Sales
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('prefill') === '1') {
+      const raw = sessionStorage.getItem('quote_prefill')
+      if (raw) {
+        try {
+          const pf = JSON.parse(raw)
+          setForm({ ...EMPTY, quote_number: genNumber(), ...pf, items: [{ name: '', qty: 1, unit: 'cái', price: 0 }] })
+          setEditId(null); setOpen(true)
+        } catch (e) { /* noop */ }
+        sessionStorage.removeItem('quote_prefill')
+      }
+      window.history.replaceState({}, '', '/quotes')
+    }
+  }, [])
+
   const genNumber = () => 'BG-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.floor(Math.random() * 900 + 100)
 
   const openNew = () => { setForm({ ...EMPTY, quote_number: genNumber(), items: [{ name: '', qty: 1, unit: 'cái', price: 0 }] }); setEditId(null); setOpen(true) }
