@@ -96,8 +96,7 @@ export function exportQuotePDF(quote) {
   cy += 2
   doc.setFont('Roboto', 'normal').setFontSize(9.5).setTextColor(...INK)
   const introLines = doc.splitTextToSize(INTRO, W - 2 * M)
-  doc.text(introLines, M, cy)
-  cy += introLines.length * 5
+  introLines.forEach((ln) => { doc.text(ln, M, cy); cy += 5 })
 
   y = cy + 4
 
@@ -147,8 +146,11 @@ export function exportQuotePDF(quote) {
   line('Tạm tính:', `${fmt(sub)} đ`)
   if (disc > 0) line('Chiết khấu:', `- ${fmt(disc)} đ`)
   line(`VAT (${quote.vat_percent || 0}%):`, `${fmt(vat)} đ`)
-  doc.setDrawColor(...BRAND).setLineWidth(0.4).line(labelX, ty - 2, valX, ty - 2)
-  ty += 2
+  // Gạch ngang đỏ: cách dòng VAT phía trên ~4mm
+  const ruleY = ty - 2
+  doc.setDrawColor(...BRAND).setLineWidth(0.4).line(labelX, ruleY, valX, ruleY)
+  // TỔNG CỘNG cách gạch đỏ một khoảng bằng khoảng cách từ gạch tới dòng trên (~4mm)
+  ty = ruleY + 6
   line('TỔNG CỘNG:', `${fmt(total)} đ`, true, BRAND)
 
   const afterTotalY = ty // mốc ngay dưới dòng Tổng cộng
@@ -176,10 +178,11 @@ export function exportQuotePDF(quote) {
     doc.text(lines, M, ny)
     ny += lines.length * 4.5
   })
+  const noteEndY = ny // mốc kết thúc khối Lưu ý (dòng "Liên hệ: Mr. Trường...")
 
-  // ===== Chữ ký (bên phải, ngang khối Lưu ý) =====
+  // ===== Chữ ký — nằm DƯỚI toàn bộ khối Lưu ý, thấp hơn ~1cm =====
   const sigX = W - M - 40
-  let sigY = Math.max(afterTotalY + 20, ny - (FOOTER_NOTE.length * 4.5 + 5))
+  let sigY = noteEndY + 10 // 10mm ≈ 1cm dưới dòng cuối phần Lưu ý
   doc.setFont('Roboto', 'bold').setFontSize(9.5).setTextColor(...INK)
   doc.text('ĐẠI DIỆN BÊN BÁN', sigX, sigY, { align: 'center' })
   doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT)
@@ -187,11 +190,12 @@ export function exportQuotePDF(quote) {
   // "(Đã ký)" ngay dưới
   doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...SOFT)
   doc.text('(Đã ký)', sigX, sigY + 11, { align: 'center' })
-  // Tên giám đốc cách "(Đã ký)" khoảng 1cm (10mm)
-  doc.setFont('Roboto', 'bold').setFontSize(10).setTextColor(...INK)
-  doc.text(SIGNER.name, sigX, sigY + 21, { align: 'center' })
+  // "(Giám đốc)" cách "(Đã ký)" khoảng 1.5cm (15mm), nằm TRÊN tên
   doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
   doc.text(`(${SIGNER.title})`, sigX, sigY + 26, { align: 'center' })
+  // Tên giám đốc ngay dưới "(Giám đốc)"
+  doc.setFont('Roboto', 'bold').setFontSize(10).setTextColor(...INK)
+  doc.text(SIGNER.name, sigX, sigY + 31, { align: 'center' })
 
   doc.save(`${quote.quote_number || 'bao-gia'}.pdf`)
 }
