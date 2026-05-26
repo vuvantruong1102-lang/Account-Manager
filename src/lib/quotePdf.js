@@ -1,19 +1,20 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { ROBOTO_REGULAR, ROBOTO_BOLD } from './robotoFont'
-import { YOKOOL_LOGO } from './logoData'
+import { YOKOOL_LOGO, YOKOOL_LOGO_RATIO } from './logoData'
 
 const BRAND = [220, 20, 59] // #dc143b
 const INK = [31, 36, 48]
 const SOFT = [91, 97, 112]
 
-// ⚠️ CHỈNH THÔNG TIN CÔNG TY BẠN Ở ĐÂY
+// ⚠️ Thông tin công ty (hiện trên báo giá)
 const SELLER = {
-  name: 'CÔNG TY YOKOOL',
-  address: 'Địa chỉ công ty của bạn',
-  phone: '0906 079 936',
-  email: 'sales@yokool.vn',
-  taxCode: '0000000000',
+  name: 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ VÀ SẢN XUẤT VNF VIỆT NAM',
+  address: 'Tổ dân phố Phú Mỹ 3, phường Bắc Giang, tỉnh Bắc Ninh',
+  office: 'VPĐD tại Hà Nội: 18LK19, KĐT Văn Khê, phường Hà Đông, TP Hà Nội',
+  taxCode: '2400833385',
+  email: 'contact@yokool.vn',
+  website: 'https://yokool.vn/b2b',
 }
 
 const INTRO = 'Cảm ơn Quý Công ty đã quan tâm và dành thời gian trao đổi với chúng tôi về các sản phẩm của Yokool. Chúng tôi xin được giới thiệu chi tiết sản phẩm kèm báo giá. Rất mong có cơ hội được hợp tác với Quý Công ty!'
@@ -25,6 +26,8 @@ const FOOTER_NOTE = [
   'Báo giá có giá trị trong vòng 15 ngày.',
   'Liên hệ: Mr. Trường - Sales Manager: 0906 079 936',
 ]
+
+const SIGNER = { name: 'Vũ Văn Cường', title: 'Giám đốc' }
 
 const fmt = (n) => (Number(n) || 0).toLocaleString('vi-VN')
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN') : ''
@@ -41,30 +44,39 @@ export function exportQuotePDF(quote) {
 
   const W = doc.internal.pageSize.getWidth()
   const M = 15
-  let y = 18
+  let y = 16
 
-  // ===== Header: logo + tên người bán + nhãn BÁO GIÁ =====
-  // Logo Yokool bên trái
-  const logoW = 38
-  const logoH = logoW * (176 / 600) // tỉ lệ logo
-  try { doc.addImage(YOKOOL_LOGO, 'PNG', M, y - 4, logoW, logoH) } catch (e) { /* noop */ }
+  // ===== Dòng tiêu đề trên cùng: [logo YOKOOL] B2B - Premium Tech gifts for Business =====
+  const titleH = 6 // chiều cao logo trong dòng tiêu đề (mm)
+  const titleLogoW = titleH * YOKOOL_LOGO_RATIO
+  try { doc.addImage(YOKOOL_LOGO, 'PNG', M, y - titleH + 1, titleLogoW, titleH) } catch (e) { /* noop */ }
+  doc.setFont('Roboto', 'bold').setFontSize(13).setTextColor(...INK)
+  doc.text(' B2B', M + titleLogoW, y)
+  const afterB2B = M + titleLogoW + doc.getTextWidth(' B2B')
+  doc.setFont('Roboto', 'normal').setFontSize(11).setTextColor(...SOFT)
+  doc.text('  -  Premium Tech gifts for Business', afterB2B, y)
 
-  const infoX = M + logoW + 6
-  doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...BRAND)
-  doc.text(SELLER.name, infoX, y)
-  doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
-  doc.text(SELLER.address, infoX, y + 5)
-  doc.text(`ĐT: ${SELLER.phone}  •  Email: ${SELLER.email}`, infoX, y + 9.5)
-  doc.text(`MST: ${SELLER.taxCode}`, infoX, y + 14)
+  y += 8
 
-  doc.setFont('Roboto', 'bold').setFontSize(22).setTextColor(...INK)
+  // ===== Thông tin công ty (trái) + nhãn BÁO GIÁ (phải) =====
+  doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
+  const nameLines = doc.splitTextToSize(SELLER.name, W - 2 * M - 50)
+  doc.text(nameLines, M, y)
+  let sy = y + nameLines.length * 4.2 + 1
+  doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT)
+  doc.text(`Địa chỉ: ${SELLER.address}`, M, sy); sy += 4
+  doc.text(SELLER.office, M, sy); sy += 4
+  doc.text(`MST: ${SELLER.taxCode}`, M, sy); sy += 4
+  doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, M, sy); sy += 4
+
+  doc.setFont('Roboto', 'bold').setFontSize(22).setTextColor(...BRAND)
   doc.text('BÁO GIÁ', W - M, y + 2, { align: 'right' })
   doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...SOFT)
   doc.text(`Số: ${quote.quote_number || ''}`, W - M, y + 8, { align: 'right' })
   doc.text(`Ngày: ${fmtDate(quote.created_at || new Date())}`, W - M, y + 12.5, { align: 'right' })
   if (quote.valid_until) doc.text(`Hiệu lực đến: ${fmtDate(quote.valid_until)}`, W - M, y + 17, { align: 'right' })
 
-  y += 24
+  y = Math.max(sy, y + 19) + 3
   doc.setDrawColor(...BRAND).setLineWidth(0.6).line(M, y, W - M, y)
   y += 8
 
@@ -139,39 +151,47 @@ export function exportQuotePDF(quote) {
   ty += 2
   line('TỔNG CỘNG:', `${fmt(total)} đ`, true, BRAND)
 
-  // ===== Khối "Lưu ý" bên trái (ngang hàng với tổng kết) =====
-  const noteStartY = doc.lastAutoTable.finalY + 6
-  let ny = noteStartY
+  const afterTotalY = ty // mốc ngay dưới dòng Tổng cộng
+
+  // ===== Ghi chú thêm (nếu user nhập) =====
+  let gy = afterTotalY
+  if (quote.notes) {
+    gy += 4
+    doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
+    doc.text('Ghi chú thêm:', M, gy)
+    doc.setFont('Roboto', 'normal').setTextColor(...SOFT)
+    const split = doc.splitTextToSize(quote.notes, W - 2 * M)
+    doc.text(split, M, gy + 5)
+    gy += 5 + split.length * 5
+  }
+
+  // ===== Khối "Lưu ý" — lui xuống thấp hơn dòng Tổng cộng khoảng 2cm =====
+  let ny = Math.max(afterTotalY + 20, gy + 4) // 20mm ≈ 2cm dưới Tổng cộng
   doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
   doc.text('Lưu ý:', M, ny)
   ny += 5
   doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
   FOOTER_NOTE.forEach((n) => {
-    const lines = doc.splitTextToSize(`-  ${n}`, labelX - M - 6)
+    const lines = doc.splitTextToSize(`-  ${n}`, W - 2 * M - 55)
     doc.text(lines, M, ny)
     ny += lines.length * 4.5
   })
 
-  // Lấy mốc thấp nhất giữa cột trái (lưu ý) và cột phải (tổng kết)
-  ty = Math.max(ty, ny)
-
-  // ===== Ghi chú thêm (nếu user nhập) =====
-  if (quote.notes) {
-    ty += 4
-    doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
-    doc.text('Ghi chú thêm:', M, ty)
-    doc.setFont('Roboto', 'normal').setTextColor(...SOFT)
-    const split = doc.splitTextToSize(quote.notes, W - 2 * M)
-    doc.text(split, M, ty + 5)
-    ty += 5 + split.length * 5
-  }
-
-  // ===== Chữ ký =====
-  ty = Math.max(ty + 14, doc.internal.pageSize.getHeight() - 45)
+  // ===== Chữ ký (bên phải, ngang khối Lưu ý) =====
+  const sigX = W - M - 40
+  let sigY = Math.max(afterTotalY + 20, ny - (FOOTER_NOTE.length * 4.5 + 5))
   doc.setFont('Roboto', 'bold').setFontSize(9.5).setTextColor(...INK)
-  doc.text('ĐẠI DIỆN BÊN BÁN', W - M - 45, ty, { align: 'center' })
+  doc.text('ĐẠI DIỆN BÊN BÁN', sigX, sigY, { align: 'center' })
   doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT)
-  doc.text('(Ký, ghi rõ họ tên)', W - M - 45, ty + 5, { align: 'center' })
+  doc.text('(Ký, ghi rõ họ tên)', sigX, sigY + 5, { align: 'center' })
+  // "(Đã ký)" ngay dưới
+  doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...SOFT)
+  doc.text('(Đã ký)', sigX, sigY + 11, { align: 'center' })
+  // Tên giám đốc cách "(Đã ký)" khoảng 1cm (10mm)
+  doc.setFont('Roboto', 'bold').setFontSize(10).setTextColor(...INK)
+  doc.text(SIGNER.name, sigX, sigY + 21, { align: 'center' })
+  doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
+  doc.text(`(${SIGNER.title})`, sigX, sigY + 26, { align: 'center' })
 
   doc.save(`${quote.quote_number || 'bao-gia'}.pdf`)
 }
