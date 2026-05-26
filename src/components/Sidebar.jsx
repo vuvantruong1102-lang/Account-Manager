@@ -1,13 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, MessageSquareText, PhoneCall, Building2, Store,
-  KanbanSquare, History, Package, FileText, LogOut,
+  KanbanSquare, History, Package, FileText, LogOut, Target,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { section: 'Bán hàng' },
+  { to: '/sales', label: 'Sales', icon: Target },
   { to: '/pipeline', label: 'Pipeline cơ hội', icon: KanbanSquare },
   { to: '/quotes', label: 'Báo giá nhanh', icon: FileText },
   { to: '/interactions', label: 'Lịch sử & Follow-up', icon: History },
@@ -31,14 +32,9 @@ export default function Sidebar() {
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-paper-line bg-white">
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-white">
-          <span className="font-display text-lg font-700">R</span>
-        </div>
-        <div>
-          <p className="font-display text-base font-700 leading-tight text-ink">TechGift</p>
-          <p className="text-[11px] font-medium uppercase tracking-wider text-ink-faint">CRM</p>
-        </div>
+      <div className="px-5 py-5">
+        <img src="/logo-mark.png" alt="Yokool" className="h-7 w-auto" />
+        <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-faint">B2B CRM</p>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-2">
