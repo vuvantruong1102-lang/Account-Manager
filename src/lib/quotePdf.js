@@ -187,11 +187,26 @@ export function exportQuotePDF(quote) {
   // ===== Phần ký — nằm DƯỚI toàn bộ khối Lưu ý, thấp hơn ~1cm, căn TRÁI =====
   // Mép trái đặt ngang vị trí chữ "Đại diện bên bán" cũ (khoảng nửa phải trang)
   const sigLeftX = W - M - 75
+  const sigValX = sigLeftX + 30 // cột giá trị thẳng hàng
   let sigY = noteEndY + 10 // 10mm ≈ 1cm dưới dòng cuối phần Lưu ý
+
+  // Dòng "Người làm báo giá:" — giá trị in đậm
   doc.setFont('Roboto', 'normal').setFontSize(9.5).setTextColor(...INK)
-  doc.text(`Người làm báo giá: ${SIGNER.name}`, sigLeftX, sigY)
-  doc.text(`Chức vụ: ${SIGNER.title}`, sigLeftX, sigY + 6)
-  doc.text('Chữ ký và dấu', sigLeftX, sigY + 12)
+  doc.text('Người làm báo giá:', sigLeftX, sigY)
+  doc.setFont('Roboto', 'bold')
+  doc.text(SIGNER.name, sigValX, sigY)
+
+  // Dòng "Chức vụ:" — giá trị in đậm
+  doc.setFont('Roboto', 'normal')
+  doc.text('Chức vụ:', sigLeftX, sigY + 6)
+  doc.setFont('Roboto', 'bold')
+  doc.text(SIGNER.title, sigValX, sigY + 6)
+
+  // Dòng "Chữ ký và dấu" + đường kẻ ký
+  doc.setFont('Roboto', 'normal').setTextColor(...INK)
+  doc.text('Chữ ký và dấu', sigLeftX, sigY + 14)
+  doc.setDrawColor(...INK).setLineWidth(0.3)
+  doc.line(sigValX, sigY + 15, sigValX + 42, sigY + 15)
 
   doc.save(`${quote.quote_number || 'bao-gia'}.pdf`)
 }
