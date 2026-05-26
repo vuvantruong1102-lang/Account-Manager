@@ -36,8 +36,13 @@ export default function Templates() {
       user_id: user.id, title: form.title, channel: form.channel,
       target_type: form.target_type, context_prompt: form.context_prompt, content: form.content,
     }
-    if (editId) await supabase.from('crm_templates').update(payload).eq('id', editId)
-    else await supabase.from('crm_templates').insert(payload)
+    const { error } = editId
+      ? await supabase.from('crm_templates').update(payload).eq('id', editId)
+      : await supabase.from('crm_templates').insert(payload)
+    if (error) {
+      alert('Lưu thất bại: ' + error.message + '\n\nNếu lỗi nhắc đến cột "target_type" hoặc "context_prompt", bạn cần chạy file supabase_migration.sql trong Supabase SQL Editor.')
+      return
+    }
     setOpen(false); load()
   }
 

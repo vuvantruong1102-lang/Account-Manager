@@ -10,7 +10,7 @@ const EMPTY = {
   quote_number: '', company_name: '', address: '', tax_code: '',
   contact_person: '', contact_email: '', vat_percent: 8, discount: 0,
   notes: '', valid_until: '',
-  items: [{ name: '', qty: 1, unit: 'cái', price: 0 }],
+  items: [{ name: '', model: '', qty: 1, unit: 'cái', price: 0 }],
 }
 
 export default function Quotes() {
@@ -40,7 +40,7 @@ export default function Quotes() {
       if (raw) {
         try {
           const pf = JSON.parse(raw)
-          setForm({ ...EMPTY, quote_number: genNumber(), ...pf, items: [{ name: '', qty: 1, unit: 'cái', price: 0 }] })
+          setForm({ ...EMPTY, quote_number: genNumber(), ...pf, items: [{ name: '', model: '', qty: 1, unit: 'cái', price: 0 }] })
           setEditId(null); setOpen(true)
         } catch (e) { /* noop */ }
         sessionStorage.removeItem('quote_prefill')
@@ -51,7 +51,7 @@ export default function Quotes() {
 
   const genNumber = () => 'BG-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.floor(Math.random() * 900 + 100)
 
-  const openNew = () => { setForm({ ...EMPTY, quote_number: genNumber(), items: [{ name: '', qty: 1, unit: 'cái', price: 0 }] }); setEditId(null); setOpen(true) }
+  const openNew = () => { setForm({ ...EMPTY, quote_number: genNumber(), items: [{ name: '', model: '', qty: 1, unit: 'cái', price: 0 }] }); setEditId(null); setOpen(true) }
   const openEdit = (r) => {
     setForm({ ...EMPTY, ...r, items: (r.items?.length ? r.items : EMPTY.items) }); setEditId(r.id); setOpen(true)
   }
@@ -69,7 +69,7 @@ export default function Quotes() {
       user_id: user.id, quote_number: form.quote_number, company_name: form.company_name,
       address: form.address, tax_code: form.tax_code, contact_person: form.contact_person,
       contact_email: form.contact_email,
-      items: form.items.filter((it) => it.name).map((it) => ({ name: it.name, qty: Number(it.qty) || 0, unit: it.unit, price: Number(it.price) || 0 })),
+      items: form.items.filter((it) => it.name).map((it) => ({ name: it.name, model: it.model || '', qty: Number(it.qty) || 0, unit: it.unit, price: Number(it.price) || 0 })),
       vat_percent: Number(form.vat_percent) || 0, discount: Number(form.discount) || 0,
       notes: form.notes, valid_until: form.valid_until || null,
     }
@@ -84,7 +84,7 @@ export default function Quotes() {
   }
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
-  const addItem = () => setForm({ ...form, items: [...form.items, { name: '', qty: 1, unit: 'cái', price: 0 }] })
+  const addItem = () => setForm({ ...form, items: [...form.items, { name: '', model: '', qty: 1, unit: 'cái', price: 0 }] })
   const updateItem = (i, k, v) => {
     const items = [...form.items]; items[i] = { ...items[i], [k]: v }
     if (k === 'name') {
@@ -187,13 +187,15 @@ export default function Quotes() {
             <div className="space-y-2">
               {form.items.map((it, i) => (
                 <div key={i} className="grid grid-cols-12 items-center gap-2">
-                  <input className="input-field col-span-5 py-2" list="prod-list" placeholder="Tên mặt hàng"
+                  <input className="input-field col-span-4 py-2" list="prod-list" placeholder="Tên mặt hàng"
                     value={it.name} onChange={(e) => updateItem(i, 'name', e.target.value)} />
-                  <input className="input-field col-span-2 py-2" type="number" placeholder="SL"
+                  <input className="input-field col-span-3 py-2" placeholder="Model"
+                    value={it.model || ''} onChange={(e) => updateItem(i, 'model', e.target.value)} />
+                  <input className="input-field col-span-1 py-2" type="number" placeholder="SL"
                     value={it.qty} onChange={(e) => updateItem(i, 'qty', e.target.value)} />
                   <input className="input-field col-span-1 py-2" placeholder="ĐV"
                     value={it.unit} onChange={(e) => updateItem(i, 'unit', e.target.value)} />
-                  <input className="input-field col-span-3 py-2" type="number" placeholder="Đơn giá"
+                  <input className="input-field col-span-2 py-2" type="number" placeholder="Đơn giá"
                     value={it.price} onChange={(e) => updateItem(i, 'price', e.target.value)} />
                   <button onClick={() => removeItem(i)} className="col-span-1 flex justify-center rounded-lg p-2 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><X size={15} /></button>
                 </div>

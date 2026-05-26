@@ -64,8 +64,13 @@ export default function Scripts() {
       user_id: user.id, title: form.title, target_type: form.target_type,
       context_prompt: form.context_prompt, content: form.content,
     }
-    if (editId) await supabase.from('crm_scripts').update(payload).eq('id', editId)
-    else await supabase.from('crm_scripts').insert(payload)
+    const { error } = editId
+      ? await supabase.from('crm_scripts').update(payload).eq('id', editId)
+      : await supabase.from('crm_scripts').insert(payload)
+    if (error) {
+      alert('Lưu thất bại: ' + error.message + '\n\nNếu lỗi nhắc đến cột "context_prompt", bạn cần chạy file supabase_migration.sql trong Supabase SQL Editor.')
+      return
+    }
     setOpen(false); load()
   }
 
