@@ -34,6 +34,8 @@ export const CHANNELS = [
   { value: 'email', label: 'Email', color: 'bg-blue-100 text-blue-700 border-blue-200' },
   { value: 'zalo', label: 'Zalo', color: 'bg-sky-100 text-sky-700 border-sky-200' },
   { value: 'call', label: 'Call', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  { value: 'facebook', label: 'Facebook', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
+  { value: 'other', label: 'Khác', color: 'bg-gray-100 text-gray-600 border-gray-200' },
 ]
 
 export const getChannelMeta = (value) =>

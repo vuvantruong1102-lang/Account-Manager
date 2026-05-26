@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { ROBOTO_REGULAR, ROBOTO_BOLD } from './robotoFont'
+import { YOKOOL_LOGO } from './logoData'
 
 const BRAND = [220, 20, 59] // #dc143b
 const INK = [31, 36, 48]
@@ -8,12 +9,22 @@ const SOFT = [91, 97, 112]
 
 // ⚠️ CHỈNH THÔNG TIN CÔNG TY BẠN Ở ĐÂY
 const SELLER = {
-  name: 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ VÀ SẢN XUẤT VNF VIỆT NAM',
-  address: 'Tổ dân phố Phú Mỹ 3, phường Bắc Giang, tỉnh Bắc Ninh',
-  phone: '0822 838 665',
-  email: 'contact@yokool.vn',
-  taxCode: '2400883385',
+  name: 'CÔNG TY YOKOOL',
+  address: 'Địa chỉ công ty của bạn',
+  phone: '0906 079 936',
+  email: 'sales@yokool.vn',
+  taxCode: '0000000000',
 }
+
+const INTRO = 'Cảm ơn Quý Công ty đã quan tâm và dành thời gian trao đổi với chúng tôi về các sản phẩm của Yokool. Chúng tôi xin được giới thiệu chi tiết sản phẩm kèm báo giá. Rất mong có cơ hội được hợp tác với Quý Công ty!'
+
+const FOOTER_NOTE = [
+  'Đơn giá đã bao gồm thuế VAT và phí vận chuyển.',
+  'Chính sách bảo hành chính hãng 12 tháng.',
+  'Đối với đơn hàng số lượng lớn hơn, vui lòng liên hệ chúng tôi để có giá tốt hơn.',
+  'Báo giá có giá trị trong vòng 15 ngày.',
+  'Liên hệ: Mr. Trường - Sales Manager: 0906 079 936',
+]
 
 const fmt = (n) => (Number(n) || 0).toLocaleString('vi-VN')
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN') : ''
@@ -32,13 +43,19 @@ export function exportQuotePDF(quote) {
   const M = 15
   let y = 18
 
-  // ===== Header: tên người bán + nhãn BÁO GIÁ =====
-  doc.setFont('Roboto', 'bold').setFontSize(15).setTextColor(...BRAND)
-  doc.text(SELLER.name, M, y)
+  // ===== Header: logo + tên người bán + nhãn BÁO GIÁ =====
+  // Logo Yokool bên trái
+  const logoW = 38
+  const logoH = logoW * (176 / 600) // tỉ lệ logo
+  try { doc.addImage(YOKOOL_LOGO, 'PNG', M, y - 4, logoW, logoH) } catch (e) { /* noop */ }
+
+  const infoX = M + logoW + 6
+  doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...BRAND)
+  doc.text(SELLER.name, infoX, y)
   doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
-  doc.text(SELLER.address, M, y + 5)
-  doc.text(`ĐT: ${SELLER.phone}  •  Email: ${SELLER.email}`, M, y + 9.5)
-  doc.text(`MST: ${SELLER.taxCode}`, M, y + 14)
+  doc.text(SELLER.address, infoX, y + 5)
+  doc.text(`ĐT: ${SELLER.phone}  •  Email: ${SELLER.email}`, infoX, y + 9.5)
+  doc.text(`MST: ${SELLER.taxCode}`, infoX, y + 14)
 
   doc.setFont('Roboto', 'bold').setFontSize(22).setTextColor(...INK)
   doc.text('BÁO GIÁ', W - M, y + 2, { align: 'right' })
@@ -62,6 +79,13 @@ export function exportQuotePDF(quote) {
   if (quote.tax_code) { doc.text(`MST: ${quote.tax_code}`, M, cy); cy += 5 }
   if (quote.contact_person) { doc.text(`Người liên hệ: ${quote.contact_person}`, M, cy); cy += 5 }
   if (quote.contact_email) { doc.text(`Email: ${quote.contact_email}`, M, cy); cy += 5 }
+
+  // ===== Lời cảm ơn / giới thiệu =====
+  cy += 2
+  doc.setFont('Roboto', 'normal').setFontSize(9.5).setTextColor(...INK)
+  const introLines = doc.splitTextToSize(INTRO, W - 2 * M)
+  doc.text(introLines, M, cy)
+  cy += introLines.length * 5
 
   y = cy + 4
 
@@ -115,11 +139,27 @@ export function exportQuotePDF(quote) {
   ty += 2
   line('TỔNG CỘNG:', `${fmt(total)} đ`, true, BRAND)
 
-  // ===== Ghi chú =====
+  // ===== Khối "Lưu ý" bên trái (ngang hàng với tổng kết) =====
+  const noteStartY = doc.lastAutoTable.finalY + 6
+  let ny = noteStartY
+  doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
+  doc.text('Lưu ý:', M, ny)
+  ny += 5
+  doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
+  FOOTER_NOTE.forEach((n) => {
+    const lines = doc.splitTextToSize(`-  ${n}`, labelX - M - 6)
+    doc.text(lines, M, ny)
+    ny += lines.length * 4.5
+  })
+
+  // Lấy mốc thấp nhất giữa cột trái (lưu ý) và cột phải (tổng kết)
+  ty = Math.max(ty, ny)
+
+  // ===== Ghi chú thêm (nếu user nhập) =====
   if (quote.notes) {
     ty += 4
     doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
-    doc.text('Ghi chú:', M, ty)
+    doc.text('Ghi chú thêm:', M, ty)
     doc.setFont('Roboto', 'normal').setTextColor(...SOFT)
     const split = doc.splitTextToSize(quote.notes, W - 2 * M)
     doc.text(split, M, ty + 5)
