@@ -8,11 +8,11 @@ const SOFT = [91, 97, 112]
 
 // ⚠️ CHỈNH THÔNG TIN CÔNG TY BẠN Ở ĐÂY
 const SELLER = {
-  name: 'CÔNG TY TNHH TECHGIFT',
-  address: 'Địa chỉ công ty của bạn',
-  phone: '0900 000 000',
-  email: 'sales@techgift.vn',
-  taxCode: '0000000000',
+  name: 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ VÀ SẢN XUẤT VNF VIỆT NAM',
+  address: 'Tổ dân phố Phú Mỹ 3, phường Bắc Giang, tỉnh Bắc Ninh',
+  phone: '0822 838 665',
+  email: 'contact@yokool.vn',
+  taxCode: '2400883385',
 }
 
 const fmt = (n) => (Number(n) || 0).toLocaleString('vi-VN')
