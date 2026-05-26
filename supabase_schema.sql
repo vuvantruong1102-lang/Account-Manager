@@ -19,6 +19,7 @@ create table if not exists crm_customers (
   customer_type text default 'corporate',        -- mice | corporate | event | agency | retail | other
   suitable_products text,                        -- mặt hàng phù hợp
   contact_status text default 'new',             -- new | contacted | following | won | lost
+  reject_reason text,                            -- lý do từ chối (panel Sales)
   notes text,
   created_at timestamptz default now()
 );
@@ -41,7 +42,9 @@ create table if not exists crm_templates (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   title text not null,
-  channel text default 'email',                  -- email | zalo | call
+  channel text default 'email',                  -- email | zalo | call | facebook | other
+  target_type text default 'corporate',          -- loại khách: mice | corporate | event ...
+  context_prompt text,                            -- ngữ cảnh & prompt hướng dẫn AI
   content text,
   created_at timestamptz default now()
 );
@@ -52,6 +55,7 @@ create table if not exists crm_scripts (
   user_id uuid references auth.users(id) on delete cascade,
   title text not null,
   target_type text default 'corporate',          -- mice | corporate | event ...
+  context_prompt text,                            -- ngữ cảnh & prompt hướng dẫn AI
   content text,
   created_at timestamptz default now()
 );

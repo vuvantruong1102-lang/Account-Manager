@@ -1,4 +1,4 @@
-# TechGift CRM
+# Yokool B2B CRM
 
 CRM quản trị quan hệ khách hàng cho ngành quà tặng công nghệ B2B (ổ điện du lịch, sạc dây rút, sạc dự phòng).
 
@@ -33,7 +33,7 @@ trong cùng project.
 ```bash
 git init
 git add .
-git commit -m "init TechGift CRM"
+git commit -m "init Yokool B2B CRM"
 git remote add origin <repo-cua-ban>
 git push -u origin main
 ```
