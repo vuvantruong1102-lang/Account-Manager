@@ -105,6 +105,7 @@ export function exportQuotePDF(quote) {
   const rows = items.map((it, i) => [
     String(i + 1),
     it.name,
+    it.model || '',
     `${fmt(it.qty)} ${it.unit || ''}`,
     `${fmt(it.price)} đ`,
     `${fmt((Number(it.qty) || 0) * (Number(it.price) || 0))} đ`,
@@ -112,16 +113,19 @@ export function exportQuotePDF(quote) {
 
   autoTable(doc, {
     startY: y,
-    head: [['STT', 'Mặt hàng', 'Số lượng', 'Đơn giá', 'Thành tiền']],
+    head: [['STT', 'Mặt hàng', 'Model', 'Số lượng', 'Đơn giá', 'Thành tiền']],
     body: rows,
     margin: { left: M, right: M },
     styles: { font: 'Roboto', fontSize: 9, cellPadding: 2.5, textColor: INK, lineColor: [236, 236, 234] },
-    headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: INK, textColor: [255, 255, 255], fontSize: 9 },
+    // Tiêu đề căn giữa cho cân xứng
+    headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: INK, textColor: [255, 255, 255], fontSize: 9, halign: 'center' },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 12 },
-      2: { halign: 'right', cellWidth: 28 },
-      3: { halign: 'right', cellWidth: 32 },
-      4: { halign: 'right', cellWidth: 35 },
+      0: { halign: 'center', cellWidth: 12 },           // STT
+      1: { halign: 'left' },                             // Mặt hàng (co giãn)
+      2: { halign: 'center', cellWidth: 26 },            // Model
+      3: { halign: 'center', cellWidth: 22 },            // Số lượng
+      4: { halign: 'right', cellWidth: 28 },             // Đơn giá
+      5: { halign: 'right', cellWidth: 32 },             // Thành tiền
     },
     alternateRowStyles: { fillColor: [250, 250, 249] },
   })
@@ -180,22 +184,14 @@ export function exportQuotePDF(quote) {
   })
   const noteEndY = ny // mốc kết thúc khối Lưu ý (dòng "Liên hệ: Mr. Trường...")
 
-  // ===== Chữ ký — nằm DƯỚI toàn bộ khối Lưu ý, thấp hơn ~1cm =====
-  const sigX = W - M - 40
+  // ===== Phần ký — nằm DƯỚI toàn bộ khối Lưu ý, thấp hơn ~1cm, căn TRÁI =====
+  // Mép trái đặt ngang vị trí chữ "Đại diện bên bán" cũ (khoảng nửa phải trang)
+  const sigLeftX = W - M - 75
   let sigY = noteEndY + 10 // 10mm ≈ 1cm dưới dòng cuối phần Lưu ý
-  doc.setFont('Roboto', 'bold').setFontSize(9.5).setTextColor(...INK)
-  doc.text('ĐẠI DIỆN BÊN BÁN', sigX, sigY, { align: 'center' })
-  doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT)
-  doc.text('(Ký, ghi rõ họ tên)', sigX, sigY + 5, { align: 'center' })
-  // "(Đã ký)" ngay dưới
-  doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...SOFT)
-  doc.text('(Đã ký)', sigX, sigY + 11, { align: 'center' })
-  // "(Giám đốc)" cách "(Đã ký)" khoảng 1.5cm (15mm), nằm TRÊN tên
-  doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
-  doc.text(`(${SIGNER.title})`, sigX, sigY + 26, { align: 'center' })
-  // Tên giám đốc ngay dưới "(Giám đốc)"
-  doc.setFont('Roboto', 'bold').setFontSize(10).setTextColor(...INK)
-  doc.text(SIGNER.name, sigX, sigY + 31, { align: 'center' })
+  doc.setFont('Roboto', 'normal').setFontSize(9.5).setTextColor(...INK)
+  doc.text(`Người làm báo giá: ${SIGNER.name}`, sigLeftX, sigY)
+  doc.text(`Chức vụ: ${SIGNER.title}`, sigLeftX, sigY + 6)
+  doc.text('Chữ ký và dấu', sigLeftX, sigY + 12)
 
   doc.save(`${quote.quote_number || 'bao-gia'}.pdf`)
 }
