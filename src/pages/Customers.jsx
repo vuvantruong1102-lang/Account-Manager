@@ -101,10 +101,10 @@ export default function Customers({ segment }) {
             <thead>
               <tr className="border-b border-paper-line bg-paper/60 text-left text-xs uppercase tracking-wide text-ink-soft">
                 <th className="px-5 py-3 font-semibold">Công ty</th>
-                <th className="px-5 py-3 font-semibold">Loại</th>
+                <th className="px-5 py-3 font-semibold whitespace-nowrap">Loại</th>
                 <th className="px-5 py-3 font-semibold">Người liên hệ</th>
                 <th className="px-5 py-3 font-semibold">Mặt hàng phù hợp</th>
-                <th className="px-5 py-3 font-semibold">Tình trạng</th>
+                <th className="px-5 py-3 font-semibold">Trạng thái</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>
@@ -121,7 +121,7 @@ export default function Customers({ segment }) {
                         {r.tax_code && <span>MST: {r.tax_code}</span>}
                       </p>
                     </td>
-                    <td className="px-5 py-3.5"><Badge className={tm.color}>{tm.label}</Badge></td>
+                    <td className="px-5 py-3.5 whitespace-nowrap"><Badge className={`${tm.color} whitespace-nowrap`}>{tm.label}</Badge></td>
                     <td className="px-5 py-3.5">
                       <p className="text-ink">{r.contact_person || '—'}</p>
                       <p className="mt-0.5 flex items-center gap-2 text-xs text-ink-faint">
@@ -183,7 +183,7 @@ export default function Customers({ segment }) {
             </select>
           </div>
           <div>
-            <label className="label-field">Tình trạng liên hệ</label>
+            <label className="label-field">Trạng thái khách hàng</label>
             <select className="input-field" value={form.contact_status} onChange={set('contact_status')}>
               {CONTACT_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>

@@ -3,21 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Eye, FileText, Trash2, Search, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { CUSTOMER_TYPES, getTypeMeta } from '../lib/constants'
+import { CUSTOMER_TYPES, getTypeMeta, CONTACT_STATUSES, getStatusMeta } from '../lib/constants'
 import { Badge, Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
 
-// Tình trạng riêng cho panel Sales
-const SALES_STATUS = [
-  { value: 'new', label: 'Chưa liên hệ', color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  { value: 'contacted', label: 'Đã liên hệ', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  { value: 'rejected', label: 'Từ chối', color: 'bg-rose-100 text-rose-700 border-rose-200' },
-]
-const getSalesStatus = (v) => SALES_STATUS.find((s) => s.value === v) || SALES_STATUS[0]
+// Panel Sales dùng chung trạng thái khách hàng với toàn hệ thống
+const SALES_STATUS = CONTACT_STATUSES
+const getSalesStatus = getStatusMeta
 
 const EMPTY_CUST = {
   segment: 'b2b', company_name: '', address: '', phone: '', tax_code: '',
   contact_person: '', contact_email: '', contact_phone: '',
-  customer_type: 'corporate', suitable_products: '', contact_status: 'new', reject_reason: '', notes: '',
+  customer_type: 'corporate', suitable_products: '', contact_status: 'working', reject_reason: '', notes: '',
 }
 
 export default function Sales() {
@@ -34,7 +30,10 @@ export default function Sales() {
 
   const load = async () => {
     setLoading(true)
-    const { data } = await supabase.from('crm_customers').select('*').order('created_at', { ascending: false })
+    // Panel Sales chỉ hiện khách hàng đang làm việc
+    const { data } = await supabase.from('crm_customers').select('*')
+      .eq('contact_status', 'working')
+      .order('created_at', { ascending: false })
     setRows(data || []); setLoading(false)
   }
   useEffect(() => { load() }, [])
@@ -47,8 +46,13 @@ export default function Sales() {
 
   // Cập nhật nhanh inline
   const update = async (id, patch) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
     await supabase.from('crm_customers').update(patch).eq('id', id)
+    // Nếu đổi trạng thái sang khác "đang làm việc" thì khách rời khỏi panel Sales
+    if (patch.contact_status && patch.contact_status !== 'working') {
+      setRows((prev) => prev.filter((r) => r.id !== id))
+    } else {
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+    }
   }
 
   const remove = async (id) => {
@@ -143,11 +147,9 @@ export default function Sales() {
                       </select>
                     </td>
                     <td className="px-4 py-3">
-                      {r.contact_status === 'rejected' ? (
-                        <input className="w-32 rounded border border-paper-line px-2 py-1 text-xs focus:border-brand focus:outline-none"
-                          defaultValue={r.reject_reason || ''} placeholder="Lý do..."
-                          onBlur={(e) => e.target.value !== (r.reject_reason || '') && update(r.id, { reject_reason: e.target.value })} />
-                      ) : <span className="text-ink-faint">—</span>}
+                      <input className="w-32 rounded border border-transparent px-2 py-1 text-xs hover:border-paper-line focus:border-brand focus:outline-none"
+                        defaultValue={r.reject_reason || ''} placeholder="—"
+                        onBlur={(e) => e.target.value !== (r.reject_reason || '') && update(r.id, { reject_reason: e.target.value })} />
                     </td>
                     <td className="px-4 py-3 max-w-[160px]">
                       <input className="w-full rounded border border-transparent px-2 py-1 text-xs hover:border-paper-line focus:border-brand focus:outline-none"
