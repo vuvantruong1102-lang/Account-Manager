@@ -1,71 +1,43 @@
-// Loại khách hàng với badge màu
-export const CUSTOMER_TYPES = [
-  { value: 'mice', label: 'Công ty MICE', color: 'bg-violet-100 text-violet-700 border-violet-200' },
-  { value: 'corporate', label: 'Corporate', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { value: 'event', label: 'Công ty Event', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  { value: 'agency', label: 'Agency / Quà tặng', color: 'bg-teal-100 text-teal-700 border-teal-200' },
-  { value: 'retail', label: 'Bán lẻ', color: 'bg-pink-100 text-pink-700 border-pink-200' },
-  { value: 'other', label: 'Khác', color: 'bg-gray-100 text-gray-600 border-gray-200' },
+// Trạng thái của mỗi LẦN làm việc với KOL (dùng cho Pipeline + Danh sách)
+// pill class quyết định màu badge.
+export const WORK_STATUS = [
+  { key: 'da_lien_he',  label: 'Đã liên hệ',  pill: 'blue'   },
+  { key: 'da_gui_hang', label: 'Đã gửi hàng', pill: 'yellow' },
+  { key: 'hoan_thanh',  label: 'Hoàn thành',  pill: 'green'  },
+  { key: 'tu_choi',     label: 'Từ chối',     pill: 'red'    },
 ]
-
-export const getTypeMeta = (value) =>
-  CUSTOMER_TYPES.find((t) => t.value === value) || CUSTOMER_TYPES[CUSTOMER_TYPES.length - 1]
-
-// Phân khúc
-export const SEGMENTS = [
-  { value: 'b2b', label: 'B2B' },
-  { value: 'retail', label: 'Retail' },
-]
-
-// Tình trạng liên hệ
-export const CONTACT_STATUSES = [
-  { value: 'new', label: 'Chưa liên hệ', color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  { value: 'contacted', label: 'Đã liên hệ', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { value: 'following', label: 'Đang theo dõi', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  { value: 'won', label: 'Đã chốt', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  { value: 'lost', label: 'Không tiềm năng', color: 'bg-rose-100 text-rose-700 border-rose-200' },
-]
-
-export const getStatusMeta = (value) =>
-  CONTACT_STATUSES.find((s) => s.value === value) || CONTACT_STATUSES[0]
-
-// Kênh chào hàng
-export const CHANNELS = [
-  { value: 'email', label: 'Email', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { value: 'zalo', label: 'Zalo', color: 'bg-sky-100 text-sky-700 border-sky-200' },
-  { value: 'call', label: 'Call', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  { value: 'facebook', label: 'Facebook', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
-  { value: 'other', label: 'Khác', color: 'bg-gray-100 text-gray-600 border-gray-200' },
-]
-
-export const getChannelMeta = (value) =>
-  CHANNELS.find((c) => c.value === value) || CHANNELS[0]
-
-// Giai đoạn pipeline (Kanban)
-export const PIPELINE_STAGES = [
-  { value: 'lead', label: 'Tiềm năng', color: '#9aa0ad' },
-  { value: 'contacted', label: 'Đã liên hệ', color: '#3b82f6' },
-  { value: 'quoted', label: 'Đã báo giá', color: '#f59e0b' },
-  { value: 'negotiating', label: 'Đàm phán', color: '#8b5cf6' },
-  { value: 'won', label: 'Chốt đơn', color: '#10b981' },
-  { value: 'lost', label: 'Thất bại', color: '#ef4444' },
-]
-
-// Loại tương tác
-export const INTERACTION_TYPES = [
-  { value: 'call', label: 'Gọi điện' },
-  { value: 'email', label: 'Email' },
-  { value: 'zalo', label: 'Zalo' },
-  { value: 'meeting', label: 'Gặp mặt' },
-  { value: 'note', label: 'Ghi chú' },
-]
-
-export const formatVND = (n) => {
-  const num = Number(n) || 0
-  return num.toLocaleString('vi-VN') + ' ₫'
+export const statusOf = (key) => {
+  // dữ liệu cũ có thể còn 'cho_video' — quy về 'Đã gửi hàng'
+  if (key === 'cho_video') return WORK_STATUS.find((s) => s.key === 'da_gui_hang')
+  return WORK_STATUS.find((s) => s.key === key) || WORK_STATUS[0]
 }
 
-export const formatDate = (d) => {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+// Phân hạng KOL theo follow
+export const TIERS = [
+  { key: 'koc',   label: 'KOC' },
+  { key: 'nano',  label: 'Nano' },
+  { key: 'micro', label: 'Micro' },
+  { key: 'macro', label: 'Macro' },
+  { key: 'mega',  label: 'Mega' },
+]
+export function autoTier(followers) {
+  const f = Number(followers) || 0
+  if (f >= 1_000_000) return 'mega'
+  if (f >= 200_000) return 'macro'
+  if (f >= 50_000) return 'micro'
+  if (f >= 10_000) return 'nano'
+  return 'koc'
 }
+export const tierLabel = (key) => (TIERS.find((t) => t.key === key) || {}).label || '—'
+
+export const RATING_TAGS = ['Uy tín', 'Đăng đúng hạn', 'Tương tác tốt', 'Hay quên', 'Trễ deadline', 'Giá tốt']
+
+// Trạng thái tổng của một KOL (ở Danh sách KOL) — khác với trạng thái từng lần làm việc
+export const KOL_STATUS = [
+  { key: 'chua_lien_he', label: 'Chưa liên hệ', pill: 'gray'   },
+  { key: 'da_lien_he',   label: 'Đã liên hệ',   pill: 'blue'   },
+  { key: 'dang_hop_tac', label: 'Đang hợp tác', pill: 'yellow' },
+  { key: 'da_hop_tac',   label: 'Đã hợp tác',   pill: 'green'  },
+  { key: 'tu_choi',      label: 'Từ chối',      pill: 'red'    },
+]
+export const kolStatusOf = (key) => KOL_STATUS.find((s) => s.key === key)
