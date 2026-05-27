@@ -26,7 +26,7 @@ export default function Quotes() {
     setLoading(true)
     const [{ data: q }, { data: p }] = await Promise.all([
       supabase.from('crm_quotes').select('*').order('created_at', { ascending: false }),
-      supabase.from('crm_products').select('name, base_price, unit'),
+      supabase.from('crm_products').select('name, sku, base_price, unit'),
     ])
     setRows(q || []); setProducts(p || []); setLoading(false)
   }
@@ -87,13 +87,27 @@ export default function Quotes() {
   const addItem = () => setForm({ ...form, items: [...form.items, { name: '', model: '', qty: 1, unit: 'cái', price: 0 }] })
   const updateItem = (i, k, v) => {
     const items = [...form.items]; items[i] = { ...items[i], [k]: v }
-    if (k === 'name') {
+    if (k === 'model') {
+      // Nhập mã (model/SKU) → tự điền tên + giá + đơn vị nếu khớp sản phẩm
+      const code = String(v).trim().toLowerCase()
+      const p = products.find((pr) => (pr.sku || '').toLowerCase() === code)
+      if (p) {
+        items[i].name = p.name
+        if (p.base_price) items[i].price = p.base_price
+        if (p.unit) items[i].unit = p.unit
+      }
+    } else if (k === 'name') {
       const p = products.find((pr) => pr.name === v)
-      if (p) { items[i].price = p.base_price; items[i].unit = p.unit }
+      if (p) {
+        if (p.sku && !items[i].model) items[i].model = p.sku
+        items[i].price = p.base_price; items[i].unit = p.unit
+      }
     }
     setForm({ ...form, items })
   }
   const removeItem = (i) => setForm({ ...form, items: form.items.filter((_, j) => j !== i) })
+
+  const lineTotal = (it) => (Number(it.qty) || 0) * (Number(it.price) || 0)
 
   const totals = calc(form)
 
@@ -184,24 +198,43 @@ export default function Quotes() {
               <label className="label-field mb-0">Mặt hàng</label>
               <button onClick={addItem} className="text-xs font-semibold text-brand hover:underline">+ Thêm dòng</button>
             </div>
-            <div className="space-y-2">
+            <p className="mb-2 text-xs text-ink-faint">Mẹo: gõ <b>mã sản phẩm</b> vào ô "Mã" để tự điền tên và đơn giá.</p>
+
+            <div className="overflow-hidden rounded-lg border border-paper-line">
+              {/* Header bảng */}
+              <div className="grid grid-cols-24 gap-1 border-b border-paper-line bg-paper/60 px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+                <div className="col-span-1 text-center">#</div>
+                <div className="col-span-4">Mã</div>
+                <div className="col-span-7">Tên mặt hàng</div>
+                <div className="col-span-2 text-center">SL</div>
+                <div className="col-span-2 text-center">ĐV</div>
+                <div className="col-span-4 text-right">Đơn giá</div>
+                <div className="col-span-3 text-right">Thành tiền</div>
+                <div className="col-span-1"></div>
+              </div>
+              {/* Các dòng */}
               {form.items.map((it, i) => (
-                <div key={i} className="grid grid-cols-12 items-center gap-2">
-                  <input className="input-field col-span-4 py-2" list="prod-list" placeholder="Tên mặt hàng"
-                    value={it.name} onChange={(e) => updateItem(i, 'name', e.target.value)} />
-                  <input className="input-field col-span-3 py-2" placeholder="Model"
+                <div key={i} className="grid grid-cols-24 items-center gap-1 border-b border-paper-line px-2 py-1.5 last:border-0">
+                  <div className="col-span-1 text-center text-xs text-ink-faint">{i + 1}</div>
+                  <input className="input-field col-span-4 py-1.5 text-sm" list="sku-list" placeholder="Mã"
                     value={it.model || ''} onChange={(e) => updateItem(i, 'model', e.target.value)} />
-                  <input className="input-field col-span-1 py-2" type="number" placeholder="SL"
+                  <input className="input-field col-span-7 py-1.5 text-sm" list="prod-list" placeholder="Tên mặt hàng"
+                    value={it.name} onChange={(e) => updateItem(i, 'name', e.target.value)} />
+                  <input className="input-field col-span-2 py-1.5 text-center text-sm" type="number" placeholder="SL"
                     value={it.qty} onChange={(e) => updateItem(i, 'qty', e.target.value)} />
-                  <input className="input-field col-span-1 py-2" placeholder="ĐV"
+                  <input className="input-field col-span-2 py-1.5 text-center text-sm" placeholder="ĐV"
                     value={it.unit} onChange={(e) => updateItem(i, 'unit', e.target.value)} />
-                  <input className="input-field col-span-2 py-2" type="number" placeholder="Đơn giá"
+                  <input className="input-field col-span-4 py-1.5 text-right text-sm" type="number" placeholder="Đơn giá"
                     value={it.price} onChange={(e) => updateItem(i, 'price', e.target.value)} />
-                  <button onClick={() => removeItem(i)} className="col-span-1 flex justify-center rounded-lg p-2 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><X size={15} /></button>
+                  <div className="col-span-3 text-right text-sm font-medium text-ink">{formatVND(lineTotal(it))}</div>
+                  <button onClick={() => removeItem(i)} className="col-span-1 flex justify-center rounded p-1 text-ink-faint hover:text-rose-600"><X size={14} /></button>
                 </div>
               ))}
               <datalist id="prod-list">
                 {products.map((p) => <option key={p.name} value={p.name} />)}
+              </datalist>
+              <datalist id="sku-list">
+                {products.filter((p) => p.sku).map((p) => <option key={p.sku} value={p.sku}>{p.name}</option>)}
               </datalist>
             </div>
           </div>
