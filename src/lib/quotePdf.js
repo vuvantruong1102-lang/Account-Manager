@@ -44,7 +44,7 @@ export function exportQuotePDF(quote) {
 
   const W = doc.internal.pageSize.getWidth()
   const M = 15
-  let y = 18
+  let y = 14
 
   // ===== KHỐI TRÁI: logo YOKOOL + B2B (dòng 1), slogan (dòng 2) =====
   const titleH = 6 // chiều cao logo (mm)
@@ -70,7 +70,7 @@ export function exportQuotePDF(quote) {
   doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, infoX, ry)
 
   // ===== Vạch kẻ đỏ — sát ngay dưới dòng email =====
-  y = ry + 4
+  y = ry + 2
   doc.setDrawColor(...BRAND).setLineWidth(0.6).line(M, y, W - M, y)
 
   // ===== "BÁO GIÁ" xuống dưới vạch đỏ ~1cm (căn giữa) + Số/Ngày lệch phải =====
