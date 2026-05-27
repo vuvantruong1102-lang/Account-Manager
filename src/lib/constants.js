@@ -17,16 +17,30 @@ export const SEGMENTS = [
   { value: 'retail', label: 'Retail' },
 ]
 
-// Trạng thái khách hàng
+// Tình trạng hợp tác (chỉ đổi trong form sửa khách hàng)
 export const CONTACT_STATUSES = [
-  { value: 'new', label: 'Chưa liên hệ', color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  { value: 'lost', label: 'Không tiềm năng', color: 'bg-rose-100 text-rose-700 border-rose-200' },
+  { value: 'not_partner', label: 'Chưa hợp tác', color: 'bg-gray-100 text-gray-600 border-gray-200' },
   { value: 'partner', label: 'Đã hợp tác', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  { value: 'working', label: 'Đang làm việc', color: 'bg-amber-100 text-amber-700 border-amber-200' },
 ]
 
 export const getStatusMeta = (value) =>
   CONTACT_STATUSES.find((s) => s.value === value) || CONTACT_STATUSES[0]
+
+// Trạng thái sales (theo dõi tiến độ cơ hội)
+export const SALES_STATUSES = [
+  { value: 'new', label: 'Chưa liên hệ', color: 'bg-gray-100 text-gray-600 border-gray-200' },
+  { value: 'contacted', label: 'Đã liên hệ', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  { value: 'quoted', label: 'Đã báo giá', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  { value: 'won', label: 'Đã chốt', color: 'bg-violet-100 text-violet-700 border-violet-200' },
+  { value: 'done', label: 'Hoàn thành', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  { value: 'rejected', label: 'Từ chối', color: 'bg-rose-100 text-rose-700 border-rose-200' },
+]
+
+export const getSalesStatusMeta = (value) =>
+  SALES_STATUSES.find((s) => s.value === value) || SALES_STATUSES[0]
+
+// Các trạng thái sales được hiển thị trong panel Sales
+export const SALES_VISIBLE = ['contacted', 'quoted', 'won']
 
 // Kênh chào hàng
 export const CHANNELS = [
