@@ -111,12 +111,16 @@ export function exportQuotePDF(quote) {
     `${fmt((Number(it.qty) || 0) * (Number(it.price) || 0))} đ`,
   ])
 
+  const tableStartY = y // mốc đầu bảng để vẽ khung bao ngoài
   autoTable(doc, {
     startY: y,
     head: [['STT', 'Mặt hàng', 'Model', 'Số lượng', 'Đơn giá', 'Thành tiền']],
     body: rows,
     margin: { left: M, right: M },
-    styles: { font: 'Roboto', fontSize: 9, cellPadding: 2.5, textColor: INK, lineColor: [236, 236, 234] },
+    theme: 'grid', // có viền các ô
+    tableLineColor: [210, 210, 208],
+    tableLineWidth: 0.1,
+    styles: { font: 'Roboto', fontSize: 9, cellPadding: 2.5, textColor: INK, lineColor: [225, 225, 223], lineWidth: 0.1 },
     // Tiêu đề căn giữa cho cân xứng
     headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: INK, textColor: [255, 255, 255], fontSize: 9, halign: 'center' },
     columnStyles: {
@@ -137,7 +141,9 @@ export function exportQuotePDF(quote) {
   const vat = afterDisc * (Number(quote.vat_percent) || 0) / 100
   const total = afterDisc + vat
 
-  let ty = doc.lastAutoTable.finalY + 6
+  let ty = doc.lastAutoTable.finalY
+  const summaryTopY = ty // ranh giới giữa bảng sản phẩm và phần tổng kết
+  ty += 6
   const labelX = W - M - 60
   const valX = W - M
 
@@ -158,6 +164,13 @@ export function exportQuotePDF(quote) {
   line('TỔNG CỘNG:', `${fmt(total)} đ`, true, BRAND)
 
   const afterTotalY = ty // mốc ngay dưới dòng Tổng cộng
+
+  // ===== Khung viền bao quanh toàn bộ bảng + phần tổng cộng =====
+  doc.setDrawColor(180, 180, 178).setLineWidth(0.3)
+  doc.rect(M, tableStartY, W - 2 * M, (afterTotalY - 4) - tableStartY)
+  // Đường kẻ ngăn giữa bảng sản phẩm và phần tổng kết
+  doc.setDrawColor(210, 210, 208).setLineWidth(0.2)
+  doc.line(M, summaryTopY, W - M, summaryTopY)
 
   // ===== Ghi chú thêm (nếu user nhập) =====
   let gy = afterTotalY
