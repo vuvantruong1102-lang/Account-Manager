@@ -44,32 +44,33 @@ export function exportQuotePDF(quote) {
 
   const W = doc.internal.pageSize.getWidth()
   const M = 15
-  let y = 16
+  let y = 18
 
-  // ===== Dòng tiêu đề trên cùng (BÊN TRÁI): [logo YOKOOL] B2B - Premium Tech gifts for Business =====
-  const titleH = 6 // chiều cao logo trong dòng tiêu đề (mm)
+  // ===== KHỐI TRÁI: logo YOKOOL + B2B (dòng 1), slogan (dòng 2) =====
+  const titleH = 6 // chiều cao logo (mm)
   const titleLogoW = titleH * YOKOOL_LOGO_RATIO
   try { doc.addImage(YOKOOL_LOGO, 'PNG', M, y - titleH + 1, titleLogoW, titleH) } catch (e) { /* noop */ }
   doc.setFont('Roboto', 'bold').setFontSize(13).setTextColor(...INK)
   doc.text(' B2B', M + titleLogoW, y)
-  const afterB2B = M + titleLogoW + doc.getTextWidth(' B2B')
-  doc.setFont('Roboto', 'normal').setFontSize(11).setTextColor(...SOFT)
-  doc.text('  -  Premium Tech gifts for Business', afterB2B, y)
+  // Slogan xuống dưới logo
+  doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...SOFT)
+  doc.text('Premium Tech gifts for Business', M, y + 6)
 
-  // ===== Thông tin công ty (BÊN PHẢI, căn phải) =====
-  let ry = y + 8
+  // ===== KHỐI PHẢI: thông tin công ty, căn LỀ TRÁI, bắt đầu từ giữa-phải trang =====
+  const infoX = W * 0.42 // mép trái khối thông tin
+  let ry = y // dòng tên công ty NGANG HÀNG với "YOKOOL B2B"
   doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
-  const nameLines = doc.splitTextToSize(SELLER.name, W - 2 * M - 30)
-  nameLines.forEach((ln) => { doc.text(ln, W - M, ry, { align: 'right' }); ry += 4.2 })
+  const nameLines = doc.splitTextToSize(SELLER.name, W - M - infoX)
+  nameLines.forEach((ln) => { doc.text(ln, infoX, ry); ry += 4.2 })
   ry += 1
   doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT)
-  doc.text(`Địa chỉ: ${SELLER.address}`, W - M, ry, { align: 'right' }); ry += 4
-  doc.text(SELLER.office, W - M, ry, { align: 'right' }); ry += 4
-  doc.text(`MST: ${SELLER.taxCode}`, W - M, ry, { align: 'right' }); ry += 4
-  doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, W - M, ry, { align: 'right' }); ry += 4
+  doc.text(`Địa chỉ: ${SELLER.address}`, infoX, ry); ry += 4
+  doc.text(SELLER.office, infoX, ry); ry += 4
+  doc.text(`MST: ${SELLER.taxCode}`, infoX, ry); ry += 4
+  doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, infoX, ry)
 
-  // ===== Vạch kẻ đỏ =====
-  y = ry + 3
+  // ===== Vạch kẻ đỏ — sát ngay dưới dòng email =====
+  y = ry + 4
   doc.setDrawColor(...BRAND).setLineWidth(0.6).line(M, y, W - M, y)
 
   // ===== "BÁO GIÁ" xuống dưới vạch đỏ ~1cm (căn giữa) + Số/Ngày lệch phải =====
