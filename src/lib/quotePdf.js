@@ -46,18 +46,19 @@ export function exportQuotePDF(quote) {
   const M = 15
   let y = 14
 
-  // ===== KHỐI TRÁI: logo YOKOOL + B2B (dòng 1), slogan (dòng 2) — to hơn 50% =====
-  const titleH = 9 // chiều cao logo (mm) — tăng 50% từ 6
+  // ===== KHỐI TRÁI: logo YOKOOL + B2B (dòng 1), slogan (dòng 2) =====
+  const titleH = 5.4 // chiều cao logo (mm) — giảm 40% từ 9
   const titleLogoW = titleH * YOKOOL_LOGO_RATIO
-  try { doc.addImage(YOKOOL_LOGO, 'PNG', M, y - titleH + 2, titleLogoW, titleH) } catch (e) { /* noop */ }
-  doc.setFont('Roboto', 'bold').setFontSize(19).setTextColor(...INK) // tăng từ 13
+  try { doc.addImage(YOKOOL_LOGO, 'PNG', M, y - titleH + 1.5, titleLogoW, titleH) } catch (e) { /* noop */ }
+  doc.setFont('Roboto', 'bold').setFontSize(11.5).setTextColor(...INK) // giảm từ 19
   doc.text(' B2B', M + titleLogoW, y)
   // Slogan xuống dưới logo
-  doc.setFont('Roboto', 'normal').setFontSize(13).setTextColor(...SOFT) // tăng từ 9
-  doc.text('Premium Tech gifts for Business', M, y + 8)
+  doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT) // giảm từ 13
+  doc.text('Premium Tech gifts for Business', M, y + 5)
 
   // ===== KHỐI PHẢI: thông tin công ty, căn LỀ PHẢI (mép phải thẳng đuôi vạch đỏ) =====
-  let ry = y // dòng tên công ty NGANG HÀNG với "YOKOOL B2B"
+  // Dòng tên công ty NGANG HÀNG (cùng baseline) với "YOKOOL B2B"
+  let ry = y
   doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
   const nameLines = doc.splitTextToSize(SELLER.name, W - M - W * 0.40)
   nameLines.forEach((ln) => { doc.text(ln, W - M, ry, { align: 'right' }); ry += 4.2 })
@@ -68,8 +69,8 @@ export function exportQuotePDF(quote) {
   doc.text(`MST: ${SELLER.taxCode}`, W - M, ry, { align: 'right' }); ry += 4
   doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, W - M, ry, { align: 'right' })
 
-  // ===== Vạch kẻ đỏ — mảnh hơn (50% độ đậm), sát ngay dưới dòng email =====
-  y = Math.max(ry, y + 8) + 2 // đảm bảo qua khỏi cả cụm logo lớn
+  // ===== Vạch kẻ đỏ — mảnh (50% độ đậm), sát ngay dưới dòng email =====
+  y = Math.max(ry, y + 5) + 2
   doc.setDrawColor(...BRAND).setLineWidth(0.3).line(M, y, W - M, y)
 
   // ===== "BÁO GIÁ" xuống dưới vạch đỏ ~2cm (căn giữa) + Số/Ngày lệch phải =====
