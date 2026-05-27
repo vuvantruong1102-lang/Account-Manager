@@ -60,7 +60,7 @@ export function exportQuotePDF(quote) {
   // Dòng tên công ty: căn LỀ PHẢI, NGANG HÀNG (cùng baseline) với "YOKOOL B2B"
   let ry = y
   doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
-  const blockLeft = W - M - W * 0.40 // mép trái khối thông tin (để các dòng dưới căn trái)
+  const blockLeft = W - M - W * 0.52 // mép trái khối thông tin (rộng hơn để tên công ty không nhảy dòng)
   const nameLines = doc.splitTextToSize(SELLER.name, W - M - blockLeft)
   nameLines.forEach((ln) => { doc.text(ln, W - M, ry, { align: 'right' }); ry += 4.2 })
   ry += 1
