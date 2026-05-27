@@ -44,45 +44,41 @@ export function exportQuotePDF(quote) {
 
   const W = doc.internal.pageSize.getWidth()
   const M = 15
-  let y = 18
+  let y = 16
 
-  // ===== KHỐI TRÁI: logo YOKOOL + B2B (dòng 1), slogan (dòng 2) =====
-  const titleH = 6 // chiều cao logo (mm)
+  // ===== Dòng tiêu đề trên cùng: [logo YOKOOL] B2B - Premium Tech gifts for Business =====
+  const titleH = 6 // chiều cao logo trong dòng tiêu đề (mm)
   const titleLogoW = titleH * YOKOOL_LOGO_RATIO
   try { doc.addImage(YOKOOL_LOGO, 'PNG', M, y - titleH + 1, titleLogoW, titleH) } catch (e) { /* noop */ }
   doc.setFont('Roboto', 'bold').setFontSize(13).setTextColor(...INK)
   doc.text(' B2B', M + titleLogoW, y)
-  // Slogan xuống dưới logo
-  doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...SOFT)
-  doc.text('Premium Tech gifts for Business', M, y + 6)
+  const afterB2B = M + titleLogoW + doc.getTextWidth(' B2B')
+  doc.setFont('Roboto', 'normal').setFontSize(11).setTextColor(...SOFT)
+  doc.text('  -  Premium Tech gifts for Business', afterB2B, y)
 
-  // ===== KHỐI PHẢI: thông tin công ty, căn LỀ TRÁI, bắt đầu từ giữa-phải trang =====
-  const infoX = W * 0.42 // mép trái khối thông tin
-  let ry = y // dòng tên công ty NGANG HÀNG với "YOKOOL B2B"
+  y += 8
+
+  // ===== Thông tin công ty (trái) + nhãn BÁO GIÁ (phải) =====
   doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
-  const nameLines = doc.splitTextToSize(SELLER.name, W - M - infoX)
-  nameLines.forEach((ln) => { doc.text(ln, infoX, ry); ry += 4.2 })
-  ry += 1
+  const nameLines = doc.splitTextToSize(SELLER.name, W - 2 * M - 50)
+  doc.text(nameLines, M, y)
+  let sy = y + nameLines.length * 4.2 + 1
   doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT)
-  doc.text(`Địa chỉ: ${SELLER.address}`, infoX, ry); ry += 4
-  doc.text(SELLER.office, infoX, ry); ry += 4
-  doc.text(`MST: ${SELLER.taxCode}`, infoX, ry); ry += 4
-  doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, infoX, ry)
+  doc.text(`Địa chỉ: ${SELLER.address}`, M, sy); sy += 4
+  doc.text(SELLER.office, M, sy); sy += 4
+  doc.text(`MST: ${SELLER.taxCode}`, M, sy); sy += 4
+  doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, M, sy); sy += 4
 
-  // ===== Vạch kẻ đỏ — sát ngay dưới dòng email =====
-  y = ry + 4
-  doc.setDrawColor(...BRAND).setLineWidth(0.6).line(M, y, W - M, y)
-
-  // ===== "BÁO GIÁ" xuống dưới vạch đỏ ~1cm (căn giữa) + Số/Ngày lệch phải =====
-  y += 10 // 10mm ≈ 1cm dưới vạch đỏ
   doc.setFont('Roboto', 'bold').setFontSize(22).setTextColor(...BRAND)
-  doc.text('BÁO GIÁ', W / 2, y, { align: 'center' })
+  doc.text('BÁO GIÁ', W - M, y + 2, { align: 'right' })
   doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...SOFT)
   doc.text(`Số: ${quote.quote_number || ''}`, W - M, y + 8, { align: 'right' })
   doc.text(`Ngày: ${fmtDate(quote.created_at || new Date())}`, W - M, y + 12.5, { align: 'right' })
   if (quote.valid_until) doc.text(`Hiệu lực đến: ${fmtDate(quote.valid_until)}`, W - M, y + 17, { align: 'right' })
 
-  y += (quote.valid_until ? 22 : 17)
+  y = Math.max(sy, y + 19) + 3
+  doc.setDrawColor(...BRAND).setLineWidth(0.6).line(M, y, W - M, y)
+  y += 8
 
   // ===== Thông tin khách hàng =====
   doc.setFont('Roboto', 'bold').setFontSize(9.5).setTextColor(...INK)
@@ -115,6 +111,7 @@ export function exportQuotePDF(quote) {
     `${fmt((Number(it.qty) || 0) * (Number(it.price) || 0))} đ`,
   ])
 
+  const tableStartY = y // mốc đầu bảng để vẽ khung bao ngoài
   autoTable(doc, {
     startY: y,
     head: [['STT', 'Mặt hàng', 'Model', 'Số lượng', 'Đơn giá', 'Thành tiền']],
@@ -145,6 +142,7 @@ export function exportQuotePDF(quote) {
   const total = afterDisc + vat
 
   let ty = doc.lastAutoTable.finalY
+  const summaryTopY = ty // ranh giới giữa bảng sản phẩm và phần tổng kết
   ty += 6
   const labelX = W - M - 60
   const valX = W - M
@@ -167,7 +165,12 @@ export function exportQuotePDF(quote) {
 
   const afterTotalY = ty // mốc ngay dưới dòng Tổng cộng
 
-  // (Viền ô bảng hàng hóa do theme 'grid' của autoTable lo; phần tổng cộng KHÔNG bo viền)
+  // ===== Khung viền bao quanh toàn bộ bảng + phần tổng cộng =====
+  doc.setDrawColor(180, 180, 178).setLineWidth(0.3)
+  doc.rect(M, tableStartY, W - 2 * M, (afterTotalY - 4) - tableStartY)
+  // Đường kẻ ngăn giữa bảng sản phẩm và phần tổng kết
+  doc.setDrawColor(210, 210, 208).setLineWidth(0.2)
+  doc.line(M, summaryTopY, W - M, summaryTopY)
 
   // ===== Ghi chú thêm (nếu user nhập) =====
   let gy = afterTotalY
