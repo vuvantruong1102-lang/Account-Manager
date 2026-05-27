@@ -17,13 +17,12 @@ export const SEGMENTS = [
   { value: 'retail', label: 'Retail' },
 ]
 
-// Tình trạng liên hệ
+// Trạng thái khách hàng
 export const CONTACT_STATUSES = [
   { value: 'new', label: 'Chưa liên hệ', color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  { value: 'contacted', label: 'Đã liên hệ', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { value: 'following', label: 'Đang theo dõi', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  { value: 'won', label: 'Đã chốt', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   { value: 'lost', label: 'Không tiềm năng', color: 'bg-rose-100 text-rose-700 border-rose-200' },
+  { value: 'partner', label: 'Đã hợp tác', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  { value: 'working', label: 'Đang làm việc', color: 'bg-amber-100 text-amber-700 border-amber-200' },
 ]
 
 export const getStatusMeta = (value) =>
