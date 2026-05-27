@@ -1,19 +1,19 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Eye, FileText, Trash2, Search, X } from 'lucide-react'
+import { Plus, Eye, FileText, Trash2, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { CUSTOMER_TYPES, getTypeMeta, CONTACT_STATUSES, getStatusMeta } from '../lib/constants'
+import {
+  CUSTOMER_TYPES, getTypeMeta, CONTACT_STATUSES, getStatusMeta,
+  SALES_STATUSES, getSalesStatusMeta, SALES_VISIBLE,
+} from '../lib/constants'
 import { Badge, Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
-
-// Panel Sales dùng chung trạng thái khách hàng với toàn hệ thống
-const SALES_STATUS = CONTACT_STATUSES
-const getSalesStatus = getStatusMeta
 
 const EMPTY_CUST = {
   segment: 'b2b', company_name: '', address: '', phone: '', tax_code: '',
   contact_person: '', contact_email: '', contact_phone: '',
-  customer_type: 'corporate', suitable_products: '', contact_status: 'working', reject_reason: '', notes: '',
+  customer_type: 'corporate', suitable_products: '',
+  contact_status: 'not_partner', sales_status: 'contacted', notes: '',
 }
 
 export default function Sales() {
@@ -30,9 +30,9 @@ export default function Sales() {
 
   const load = async () => {
     setLoading(true)
-    // Panel Sales chỉ hiện khách hàng đang làm việc
+    // Panel Sales chỉ hiện khách có trạng thái sales: Đã liên hệ / Đã báo giá / Đã chốt
     const { data } = await supabase.from('crm_customers').select('*')
-      .eq('contact_status', 'working')
+      .in('sales_status', SALES_VISIBLE)
       .order('created_at', { ascending: false })
     setRows(data || []); setLoading(false)
   }
@@ -44,11 +44,11 @@ export default function Sales() {
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
-  // Cập nhật nhanh inline
+  // Cập nhật nhanh inline (trạng thái sales, ghi chú)
   const update = async (id, patch) => {
     await supabase.from('crm_customers').update(patch).eq('id', id)
-    // Nếu đổi trạng thái sang khác "đang làm việc" thì khách rời khỏi panel Sales
-    if (patch.contact_status && patch.contact_status !== 'working') {
+    // Nếu trạng thái sales chuyển sang giá trị KHÔNG hiển thị thì khách rời panel
+    if (patch.sales_status && !SALES_VISIBLE.includes(patch.sales_status)) {
       setRows((prev) => prev.filter((r) => r.id !== id))
     } else {
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
@@ -85,7 +85,7 @@ export default function Sales() {
 
   return (
     <div>
-      <PageHeader title="Sales" subtitle="Bảng theo dõi tiếp cận và bán hàng"
+      <PageHeader title="Sales" subtitle="Bảng theo dõi tiến độ các cơ hội sales cần chú ý"
         action={<button className="btn-primary" onClick={() => { setForm(EMPTY_CUST); setAddOpen(true) }}><Plus size={16} /> Thêm khách hàng</button>} />
 
       {/* Ô tìm + gợi ý khách hàng có sẵn */}
@@ -107,12 +107,12 @@ export default function Sales() {
             </div>
           )}
         </div>
-        <span className="text-sm text-ink-soft">{filtered.length} khách hàng</span>
+        <span className="text-sm text-ink-soft">{filtered.length} cơ hội</span>
       </div>
 
       {loading ? <Spinner /> : filtered.length === 0 ? (
-        <EmptyState icon={FileText} title="Chưa có khách hàng nào"
-          hint="Bấm “Thêm khách hàng” để bắt đầu theo dõi việc tiếp cận."
+        <EmptyState icon={FileText} title="Chưa có cơ hội nào cần theo dõi"
+          hint="Panel này hiển thị khách hàng có trạng thái sales: Đã liên hệ, Đã báo giá, Đã chốt."
           action={<button className="btn-primary" onClick={() => setAddOpen(true)}><Plus size={16} /> Thêm khách hàng</button>} />
       ) : (
         <div className="overflow-x-auto card">
@@ -120,49 +120,48 @@ export default function Sales() {
             <thead>
               <tr className="border-b border-paper-line bg-paper/60 text-left text-xs uppercase tracking-wide text-ink-soft">
                 <th className="px-4 py-3 font-semibold">Tên khách hàng</th>
-                <th className="px-4 py-3 font-semibold">Loại</th>
+                <th className="px-4 py-3 font-semibold whitespace-nowrap">Loại công ty</th>
                 <th className="px-4 py-3 font-semibold">Xem</th>
+                <th className="px-4 py-3 font-semibold whitespace-nowrap">Hợp tác</th>
                 <th className="px-4 py-3 font-semibold">Sản phẩm</th>
-                <th className="px-4 py-3 font-semibold">Tình trạng</th>
-                <th className="px-4 py-3 font-semibold">Lý do từ chối</th>
+                <th className="px-4 py-3 font-semibold whitespace-nowrap">Trạng thái sales</th>
                 <th className="px-4 py-3 font-semibold">Ghi chú</th>
-                <th className="px-4 py-3 font-semibold">Báo giá</th>
+                <th className="px-4 py-3 font-semibold whitespace-nowrap">Báo giá</th>
+                <th className="px-4 py-3 font-semibold">Xóa</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((r) => {
                 const tm = getTypeMeta(r.customer_type)
+                const cm = getStatusMeta(r.contact_status)
                 return (
                   <tr key={r.id} className="border-b border-paper-line last:border-0 align-top hover:bg-paper/40">
                     <td className="px-4 py-3 font-semibold text-ink">{r.company_name}</td>
-                    <td className="px-4 py-3"><Badge className={tm.color}>{tm.label}</Badge></td>
+                    <td className="px-4 py-3 whitespace-nowrap"><Badge className={`${tm.color} whitespace-nowrap`}>{tm.label}</Badge></td>
                     <td className="px-4 py-3">
                       <button onClick={() => setViewRow(r)} className="rounded-lg p-1.5 text-ink-faint hover:bg-paper hover:text-brand"><Eye size={16} /></button>
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap"><Badge className={`${cm.color} whitespace-nowrap`}>{cm.label}</Badge></td>
                     <td className="px-4 py-3 max-w-[160px] text-ink-soft">{r.suitable_products || '—'}</td>
                     <td className="px-4 py-3">
-                      <select value={r.contact_status || 'new'} onChange={(e) => update(r.id, { contact_status: e.target.value })}
-                        className={`rounded-full border px-2 py-0.5 text-xs font-medium focus:outline-none ${getSalesStatus(r.contact_status).color}`}>
-                        {SALES_STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      <select value={r.sales_status || 'contacted'} onChange={(e) => update(r.id, { sales_status: e.target.value })}
+                        className={`rounded-full border px-2 py-0.5 text-xs font-medium focus:outline-none ${getSalesStatusMeta(r.sales_status).color}`}>
+                        {SALES_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
                     </td>
-                    <td className="px-4 py-3">
-                      <input className="w-32 rounded border border-transparent px-2 py-1 text-xs hover:border-paper-line focus:border-brand focus:outline-none"
-                        defaultValue={r.reject_reason || ''} placeholder="—"
-                        onBlur={(e) => e.target.value !== (r.reject_reason || '') && update(r.id, { reject_reason: e.target.value })} />
-                    </td>
-                    <td className="px-4 py-3 max-w-[160px]">
-                      <input className="w-full rounded border border-transparent px-2 py-1 text-xs hover:border-paper-line focus:border-brand focus:outline-none"
+                    <td className="px-4 py-3 min-w-[200px] max-w-[280px]">
+                      <textarea rows={2}
+                        className="w-full resize-y rounded border border-transparent px-2 py-1 text-xs leading-relaxed hover:border-paper-line focus:border-brand focus:outline-none"
                         defaultValue={r.notes || ''} placeholder="Thêm ghi chú..."
                         onBlur={(e) => e.target.value !== (r.notes || '') && update(r.id, { notes: e.target.value })} />
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <button onClick={() => createQuote(r)} className="flex items-center gap-1 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-semibold text-brand hover:bg-brand-100">
+                        <FileText size={13} /> Tạo
+                      </button>
+                    </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => createQuote(r)} className="flex items-center gap-1 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-semibold text-brand hover:bg-brand-100">
-                          <FileText size={13} /> Tạo
-                        </button>
-                        <button onClick={() => remove(r.id)} className="rounded-lg p-1.5 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><Trash2 size={14} /></button>
-                      </div>
+                      <button onClick={() => remove(r.id)} className="rounded-lg p-1.5 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><Trash2 size={14} /></button>
                     </td>
                   </tr>
                 )
@@ -176,20 +175,21 @@ export default function Sales() {
       <Modal open={!!viewRow} onClose={() => setViewRow(null)} title={viewRow?.company_name || 'Khách hàng'}>
         {viewRow && (
           <div className="space-y-3 text-sm">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge className={getTypeMeta(viewRow.customer_type).color}>{getTypeMeta(viewRow.customer_type).label}</Badge>
-              <Badge className={getSalesStatus(viewRow.contact_status).color}>{getSalesStatus(viewRow.contact_status).label}</Badge>
+              <Badge className={getStatusMeta(viewRow.contact_status).color}>{getStatusMeta(viewRow.contact_status).label}</Badge>
+              <Badge className={getSalesStatusMeta(viewRow.sales_status).color}>{getSalesStatusMeta(viewRow.sales_status).label}</Badge>
               <Badge className="bg-paper text-ink-soft border-paper-line">{viewRow.segment === 'retail' ? 'Retail' : 'B2B'}</Badge>
             </div>
             {[
               ['Địa chỉ', viewRow.address], ['Số điện thoại', viewRow.phone], ['Mã số thuế', viewRow.tax_code],
               ['Người liên hệ', viewRow.contact_person], ['SĐT người liên hệ', viewRow.contact_phone],
               ['Email', viewRow.contact_email], ['Mặt hàng phù hợp', viewRow.suitable_products],
-              ['Lý do từ chối', viewRow.reject_reason], ['Ghi chú', viewRow.notes],
+              ['Ghi chú', viewRow.notes],
             ].map(([k, v]) => (
               <div key={k} className="flex gap-3 border-b border-paper-line pb-2">
                 <span className="w-36 flex-shrink-0 text-xs font-semibold uppercase tracking-wide text-ink-faint">{k}</span>
-                <span className="text-ink">{v || '—'}</span>
+                <span className="text-ink whitespace-pre-wrap">{v || '—'}</span>
               </div>
             ))}
             <div className="flex justify-end pt-2">
@@ -218,6 +218,18 @@ export default function Sales() {
               {CUSTOMER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
+          <div>
+            <label className="label-field">Tình trạng hợp tác</label>
+            <select className="input-field" value={form.contact_status} onChange={set('contact_status')}>
+              {CONTACT_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label-field">Trạng thái sales</label>
+            <select className="input-field" value={form.sales_status} onChange={set('sales_status')}>
+              {SALES_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
           <div><label className="label-field">Số điện thoại</label><input className="input-field" value={form.phone} onChange={set('phone')} /></div>
           <div><label className="label-field">Mã số thuế</label><input className="input-field" value={form.tax_code} onChange={set('tax_code')} /></div>
           <div className="col-span-2"><label className="label-field">Địa chỉ</label><input className="input-field" value={form.address} onChange={set('address')} /></div>
@@ -225,6 +237,7 @@ export default function Sales() {
           <div><label className="label-field">SĐT người liên hệ</label><input className="input-field" value={form.contact_phone} onChange={set('contact_phone')} /></div>
           <div className="col-span-2"><label className="label-field">Email người liên hệ</label><input className="input-field" value={form.contact_email} onChange={set('contact_email')} /></div>
           <div className="col-span-2"><label className="label-field">Mặt hàng phù hợp</label><input className="input-field" value={form.suitable_products} onChange={set('suitable_products')} placeholder="VD: Sạc dự phòng, ổ điện du lịch..." /></div>
+          <div className="col-span-2"><label className="label-field">Ghi chú</label><textarea className="input-field min-h-[60px]" value={form.notes} onChange={set('notes')} /></div>
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <button className="btn-ghost" onClick={() => setAddOpen(false)}>Hủy</button>

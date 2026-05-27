@@ -3,14 +3,15 @@ import { Plus, Search, Pencil, Trash2, Building2, Store, Phone, Mail, MapPin } f
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  CUSTOMER_TYPES, getTypeMeta, CONTACT_STATUSES, getStatusMeta,
+  CUSTOMER_TYPES, getTypeMeta, CONTACT_STATUSES, getStatusMeta, SALES_STATUSES,
 } from '../lib/constants'
 import { Badge, Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
 
 const EMPTY = {
   company_name: '', address: '', phone: '', tax_code: '',
   contact_person: '', contact_email: '', contact_phone: '',
-  customer_type: 'corporate', suitable_products: '', contact_status: 'new', notes: '',
+  customer_type: 'corporate', suitable_products: '',
+  contact_status: 'not_partner', sales_status: 'new', notes: '',
 }
 
 export default function Customers({ segment }) {
@@ -50,7 +51,7 @@ export default function Customers({ segment }) {
       tax_code: form.tax_code, contact_person: form.contact_person,
       contact_email: form.contact_email, contact_phone: form.contact_phone,
       customer_type: form.customer_type, suitable_products: form.suitable_products,
-      contact_status: form.contact_status, notes: form.notes,
+      contact_status: form.contact_status, sales_status: form.sales_status, notes: form.notes,
     }
     if (editId) await supabase.from('crm_customers').update(payload).eq('id', editId)
     else await supabase.from('crm_customers').insert(payload)
@@ -104,7 +105,7 @@ export default function Customers({ segment }) {
                 <th className="px-5 py-3 font-semibold whitespace-nowrap">Loại</th>
                 <th className="px-5 py-3 font-semibold">Người liên hệ</th>
                 <th className="px-5 py-3 font-semibold">Mặt hàng phù hợp</th>
-                <th className="px-5 py-3 font-semibold">Trạng thái</th>
+                <th className="px-5 py-3 font-semibold">Hợp tác</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>
@@ -183,9 +184,15 @@ export default function Customers({ segment }) {
             </select>
           </div>
           <div>
-            <label className="label-field">Trạng thái khách hàng</label>
+            <label className="label-field">Tình trạng hợp tác</label>
             <select className="input-field" value={form.contact_status} onChange={set('contact_status')}>
               {CONTACT_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label-field">Trạng thái sales</label>
+            <select className="input-field" value={form.sales_status} onChange={set('sales_status')}>
+              {SALES_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
           <div className="col-span-2">
