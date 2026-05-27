@@ -60,16 +60,19 @@ export function exportQuotePDF(quote) {
   // Dòng tên công ty: căn LỀ PHẢI, NGANG HÀNG (cùng baseline) với "YOKOOL B2B"
   let ry = y
   doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
-  const blockLeft = W - M - W * 0.52 // mép trái khối thông tin (rộng hơn để tên công ty không nhảy dòng)
+  const blockLeft = W - M - W * 0.52 // giới hạn để tên công ty không nhảy dòng
   const nameLines = doc.splitTextToSize(SELLER.name, W - M - blockLeft)
   nameLines.forEach((ln) => { doc.text(ln, W - M, ry, { align: 'right' }); ry += 4.2 })
   ry += 1
-  // Các dòng phía dưới: căn LỀ TRÁI (bắt đầu thẳng từ blockLeft)
+  // Mép trái THỰC TẾ của dòng tên (đang căn phải) — để các dòng dưới thẳng hàng với nó
+  const nameWidth = Math.max(...nameLines.map((ln) => doc.getTextWidth(ln)))
+  const infoLeft = (W - M) - nameWidth
+  // Các dòng phía dưới: căn LỀ TRÁI, bắt đầu thẳng từ mép trái của dòng tên
   doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT)
-  doc.text(`Địa chỉ: ${SELLER.address}`, blockLeft, ry); ry += 4
-  doc.text(SELLER.office, blockLeft, ry); ry += 4
-  doc.text(`MST: ${SELLER.taxCode}`, blockLeft, ry); ry += 4
-  doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, blockLeft, ry)
+  doc.text(`Địa chỉ: ${SELLER.address}`, infoLeft, ry); ry += 4
+  doc.text(SELLER.office, infoLeft, ry); ry += 4
+  doc.text(`MST: ${SELLER.taxCode}`, infoLeft, ry); ry += 4
+  doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, infoLeft, ry)
 
   // ===== (Đã bỏ vạch kẻ đỏ phía trên) =====
   y = Math.max(ry, y + 6) + 4
