@@ -47,34 +47,35 @@ export function exportQuotePDF(quote) {
   let y = 14
 
   // ===== KHỐI TRÁI: logo YOKOOL + B2B (dòng 1), slogan (dòng 2) =====
-  const titleH = 5.4 // chiều cao logo (mm) — giảm 40% từ 9
+  const titleH = 6.5 // chiều cao logo (mm) — to thêm 20% từ 5.4
   const titleLogoW = titleH * YOKOOL_LOGO_RATIO
-  try { doc.addImage(YOKOOL_LOGO, 'PNG', M, y - titleH + 1.5, titleLogoW, titleH) } catch (e) { /* noop */ }
-  doc.setFont('Roboto', 'bold').setFontSize(11.5).setTextColor(...INK) // giảm từ 19
+  try { doc.addImage(YOKOOL_LOGO, 'PNG', M, y - titleH + 1.8, titleLogoW, titleH) } catch (e) { /* noop */ }
+  doc.setFont('Roboto', 'bold').setFontSize(13.8).setTextColor(...INK) // to thêm 20% từ 11.5
   doc.text(' B2B', M + titleLogoW, y)
   // Slogan xuống dưới logo
-  doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT) // giảm từ 13
-  doc.text('Premium Tech gifts for Business', M, y + 5)
+  doc.setFont('Roboto', 'normal').setFontSize(9.5).setTextColor(...SOFT) // to thêm 20% từ 8
+  doc.text('Premium Tech gifts for Business', M, y + 6)
 
-  // ===== KHỐI PHẢI: thông tin công ty, căn LỀ PHẢI (mép phải thẳng đuôi vạch đỏ) =====
-  // Dòng tên công ty NGANG HÀNG (cùng baseline) với "YOKOOL B2B"
+  // ===== KHỐI PHẢI: thông tin công ty =====
+  // Dòng tên công ty: căn LỀ PHẢI, NGANG HÀNG (cùng baseline) với "YOKOOL B2B"
   let ry = y
   doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
-  const nameLines = doc.splitTextToSize(SELLER.name, W - M - W * 0.40)
+  const blockLeft = W - M - W * 0.40 // mép trái khối thông tin (để các dòng dưới căn trái)
+  const nameLines = doc.splitTextToSize(SELLER.name, W - M - blockLeft)
   nameLines.forEach((ln) => { doc.text(ln, W - M, ry, { align: 'right' }); ry += 4.2 })
   ry += 1
+  // Các dòng phía dưới: căn LỀ TRÁI (bắt đầu thẳng từ blockLeft)
   doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT)
-  doc.text(`Địa chỉ: ${SELLER.address}`, W - M, ry, { align: 'right' }); ry += 4
-  doc.text(SELLER.office, W - M, ry, { align: 'right' }); ry += 4
-  doc.text(`MST: ${SELLER.taxCode}`, W - M, ry, { align: 'right' }); ry += 4
-  doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, W - M, ry, { align: 'right' })
+  doc.text(`Địa chỉ: ${SELLER.address}`, blockLeft, ry); ry += 4
+  doc.text(SELLER.office, blockLeft, ry); ry += 4
+  doc.text(`MST: ${SELLER.taxCode}`, blockLeft, ry); ry += 4
+  doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, blockLeft, ry)
 
-  // ===== Vạch kẻ đỏ — mảnh (50% độ đậm), sát ngay dưới dòng email =====
-  y = Math.max(ry, y + 5) + 2
-  doc.setDrawColor(...BRAND).setLineWidth(0.3).line(M, y, W - M, y)
+  // ===== (Đã bỏ vạch kẻ đỏ phía trên) =====
+  y = Math.max(ry, y + 6) + 4
 
-  // ===== "BÁO GIÁ" xuống dưới vạch đỏ ~2cm (căn giữa) + Số/Ngày lệch phải =====
-  y += 20 // ~2cm dưới vạch đỏ (thấp hơn 1cm so với trước)
+  // ===== "BÁO GIÁ" (căn giữa) + Số/Ngày lệch phải =====
+  y += 12
   doc.setFont('Roboto', 'bold').setFontSize(22).setTextColor(...BRAND)
   doc.text('BÁO GIÁ', W / 2, y, { align: 'center' })
   doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...SOFT)
@@ -158,12 +159,12 @@ export function exportQuotePDF(quote) {
   line('Tạm tính:', `${fmt(sub)} đ`)
   if (disc > 0) line('Chiết khấu:', `- ${fmt(disc)} đ`)
   line(`VAT (${quote.vat_percent || 0}%):`, `${fmt(vat)} đ`)
-  // Gạch ngang đỏ: cách dòng VAT phía trên ~4mm
+  // Gạch ngang: màu đen, mảnh (giảm 40% độ đậm), cách dòng VAT ~4mm
   const ruleY = ty - 2
-  doc.setDrawColor(...BRAND).setLineWidth(0.4).line(labelX, ruleY, valX, ruleY)
-  // TỔNG CỘNG cách gạch đỏ một khoảng bằng khoảng cách từ gạch tới dòng trên (~4mm)
+  doc.setDrawColor(...INK).setLineWidth(0.24).line(labelX, ruleY, valX, ruleY)
+  // TỔNG CỘNG cách gạch một khoảng bằng khoảng cách từ gạch tới dòng trên (~4mm)
   ty = ruleY + 6
-  line('TỔNG CỘNG:', `${fmt(total)} đ`, true, BRAND)
+  line('TỔNG CỘNG:', `${fmt(total)} đ`, true, INK)
 
   const afterTotalY = ty // mốc ngay dưới dòng Tổng cộng
 
