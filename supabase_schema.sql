@@ -18,8 +18,10 @@ create table if not exists crm_customers (
   contact_phone text,                            -- sđt người liên hệ
   customer_type text default 'corporate',        -- mice | corporate | event | agency | retail | other
   suitable_products text,                        -- mặt hàng phù hợp
-  contact_status text default 'new',             -- new | contacted | following | won | lost
-  reject_reason text,                            -- lý do từ chối (panel Sales)
+  contact_status text default 'not_partner',    -- tình trạng hợp tác: not_partner | partner
+  sales_status text default 'new',               -- trạng thái sales: new|contacted|quoted|won|done|rejected
+  sales_history jsonb default '[]'::jsonb,       -- lịch sử sales: [{date, product, qty}]
+  reject_reason text,                            -- (giữ để tương thích dữ liệu cũ)
   notes text,
   created_at timestamptz default now()
 );

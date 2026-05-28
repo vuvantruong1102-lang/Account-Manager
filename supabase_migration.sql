@@ -13,3 +13,9 @@ alter table crm_scripts add column if not exists context_prompt text;
 
 -- Khách hàng: phục vụ panel Sales (lý do từ chối)
 alter table crm_customers add column if not exists reject_reason text;
+
+-- Tách trạng thái sales khỏi tình trạng hợp tác
+alter table crm_customers add column if not exists sales_status text default 'new';
+
+-- Lịch sử sales: mảng JSON [{date, product, qty}]
+alter table crm_customers add column if not exists sales_history jsonb default '[]'::jsonb;
