@@ -11,7 +11,7 @@ import { Badge, Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
 const EMPTY = {
-  company_name: '', address: '', phone: '', tax_code: '',
+  company_name: '', address: '', phone: '', tax_code: '', website: '',
   contact_person: '', contact_email: '', contact_phone: '',
   customer_type: 'corporate', suitable_products: '',
   contact_status: 'not_partner', sales_status: 'new', notes: '',
@@ -64,7 +64,7 @@ export default function Customers({ segment }) {
     const payload = {
       segment, user_id: user.id,
       company_name: form.company_name, address: form.address, phone: form.phone,
-      tax_code: form.tax_code, contact_person: form.contact_person,
+      tax_code: form.tax_code, website: form.website, contact_person: form.contact_person,
       contact_email: form.contact_email, contact_phone: form.contact_phone,
       customer_type: form.customer_type, suitable_products: form.suitable_products,
       contact_status: form.contact_status, sales_status: form.sales_status,
@@ -119,6 +119,7 @@ export default function Customers({ segment }) {
       'Loại công ty': getTypeMeta(r.customer_type).label,
       'Địa chỉ': r.address || '',
       'Mã số thuế': r.tax_code || '',
+      'Website': r.website || '',
       'Số điện thoại': r.phone || '',
       'Người liên hệ': r.contact_person || '',
       'SĐT người liên hệ': r.contact_phone || '',
@@ -158,7 +159,7 @@ export default function Customers({ segment }) {
     // JSON giữ nguyên dữ liệu thô (cả sales_history dạng mảng) để dễ import lại
     const payload = filtered.map((r) => ({
       company_name: r.company_name, customer_type: r.customer_type,
-      address: r.address, tax_code: r.tax_code, phone: r.phone,
+      address: r.address, tax_code: r.tax_code, website: r.website, phone: r.phone,
       contact_person: r.contact_person, contact_phone: r.contact_phone, contact_email: r.contact_email,
       contact_status: r.contact_status, sales_status: r.sales_status,
       suitable_products: r.suitable_products, notes: r.notes,
@@ -344,6 +345,10 @@ export default function Customers({ segment }) {
           <div>
             <label className="label-field">Mã số thuế</label>
             <input className="input-field" value={form.tax_code} onChange={set('tax_code')} />
+          </div>
+          <div className="col-span-2">
+            <label className="label-field">Website công ty</label>
+            <input className="input-field" value={form.website} onChange={set('website')} placeholder="VD: https://congty.com" />
           </div>
           <div>
             <label className="label-field">Người liên hệ</label>
