@@ -203,9 +203,9 @@ export function exportQuotePDF(quote) {
   const sigValX = sigLeftX + 32 // cột giá trị thẳng hàng
   let sigY = noteEndY + 10 // 10mm ≈ 1cm dưới dòng cuối phần Lưu ý
 
-  // Dòng "Người làm báo giá:" — giá trị in đậm
+  // Dòng "Người duyệt báo giá:" — giá trị in đậm
   doc.setFont('Roboto', 'normal').setFontSize(9.5).setTextColor(...INK)
-  doc.text('Người làm báo giá:', sigLeftX, sigY)
+  doc.text('Người duyệt báo giá:', sigLeftX, sigY)
   doc.setFont('Roboto', 'bold')
   doc.text(SIGNER.name, sigValX, sigY)
 
