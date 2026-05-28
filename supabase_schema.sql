@@ -13,6 +13,7 @@ create table if not exists crm_customers (
   address text,
   phone text,
   tax_code text,                                 -- mã số thuế
+  website text,                                  -- website công ty
   contact_person text,                           -- người liên hệ
   contact_email text,
   contact_phone text,                            -- sđt người liên hệ

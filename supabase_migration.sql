@@ -19,3 +19,6 @@ alter table crm_customers add column if not exists sales_status text default 'ne
 
 -- Lịch sử sales: mảng JSON [{date, product, qty}]
 alter table crm_customers add column if not exists sales_history jsonb default '[]'::jsonb;
+
+-- Website công ty
+alter table crm_customers add column if not exists website text;
