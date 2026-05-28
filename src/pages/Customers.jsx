@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Search, Pencil, Trash2, Building2, Store, Phone, Mail, MapPin } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Building2, Store, Phone, Mail, MapPin, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import {
@@ -7,11 +7,20 @@ import {
 } from '../lib/constants'
 import { Badge, Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
 
+const todayISO = () => new Date().toISOString().slice(0, 10)
+
 const EMPTY = {
   company_name: '', address: '', phone: '', tax_code: '',
   contact_person: '', contact_email: '', contact_phone: '',
   customer_type: 'corporate', suitable_products: '',
   contact_status: 'not_partner', sales_status: 'new', notes: '',
+  sales_history: [],
+}
+
+const fmtDate = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return isNaN(d) ? iso : d.toLocaleDateString('vi-VN')
 }
 
 export default function Customers({ segment }) {
@@ -40,7 +49,8 @@ export default function Customers({ segment }) {
 
   const openNew = () => { setForm(EMPTY); setEditId(null); setOpen(true) }
   const openEdit = (row) => {
-    setForm({ ...EMPTY, ...row }); setEditId(row.id); setOpen(true)
+    setForm({ ...EMPTY, ...row, sales_history: Array.isArray(row.sales_history) ? row.sales_history : [] })
+    setEditId(row.id); setOpen(true)
   }
 
   const save = async () => {
@@ -51,10 +61,17 @@ export default function Customers({ segment }) {
       tax_code: form.tax_code, contact_person: form.contact_person,
       contact_email: form.contact_email, contact_phone: form.contact_phone,
       customer_type: form.customer_type, suitable_products: form.suitable_products,
-      contact_status: form.contact_status, sales_status: form.sales_status, notes: form.notes,
+      contact_status: form.contact_status, sales_status: form.sales_status,
+      notes: form.notes,
+      sales_history: (form.sales_history || []).filter((s) => s.product || s.qty || s.date),
     }
-    if (editId) await supabase.from('crm_customers').update(payload).eq('id', editId)
-    else await supabase.from('crm_customers').insert(payload)
+    const { error } = editId
+      ? await supabase.from('crm_customers').update(payload).eq('id', editId)
+      : await supabase.from('crm_customers').insert(payload)
+    if (error) {
+      alert('Lưu thất bại: ' + error.message + '\n\nNếu lỗi nhắc đến cột "sales_history" hoặc "sales_status", bạn cần chạy file supabase_migration.sql trong Supabase SQL Editor.')
+      return
+    }
     setOpen(false); load()
   }
 
@@ -63,6 +80,14 @@ export default function Customers({ segment }) {
     await supabase.from('crm_customers').delete().eq('id', id)
     load()
   }
+
+  // Lịch sử sales — thao tác trong form
+  const addHistory = () => setForm({ ...form, sales_history: [...(form.sales_history || []), { date: todayISO(), product: '', qty: '' }] })
+  const updateHistory = (i, k, v) => {
+    const arr = [...(form.sales_history || [])]; arr[i] = { ...arr[i], [k]: v }
+    setForm({ ...form, sales_history: arr })
+  }
+  const removeHistory = (i) => setForm({ ...form, sales_history: (form.sales_history || []).filter((_, j) => j !== i) })
 
   const filtered = rows.filter((r) => {
     const s = q.toLowerCase()
@@ -97,15 +122,16 @@ export default function Customers({ segment }) {
           hint="Bấm “Thêm khách hàng” để tạo bản ghi đầu tiên."
           action={<button className="btn-primary" onClick={openNew}><Plus size={16} /> Thêm khách hàng</button>} />
       ) : (
-        <div className="overflow-hidden card">
+        <div className="overflow-x-auto card">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-paper-line bg-paper/60 text-left text-xs uppercase tracking-wide text-ink-soft">
                 <th className="px-5 py-3 font-semibold">Công ty</th>
                 <th className="px-5 py-3 font-semibold whitespace-nowrap">Loại</th>
                 <th className="px-5 py-3 font-semibold">Người liên hệ</th>
-                <th className="px-5 py-3 font-semibold">Mặt hàng phù hợp</th>
-                <th className="px-5 py-3 font-semibold">Hợp tác</th>
+                <th className="px-5 py-3 font-semibold whitespace-nowrap">Hợp tác</th>
+                <th className="px-5 py-3 font-semibold">Lịch sử sales</th>
+                <th className="px-5 py-3 font-semibold">Ghi chú</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>
@@ -113,8 +139,9 @@ export default function Customers({ segment }) {
               {filtered.map((r) => {
                 const tm = getTypeMeta(r.customer_type)
                 const sm = getStatusMeta(r.contact_status)
+                const history = Array.isArray(r.sales_history) ? r.sales_history : []
                 return (
-                  <tr key={r.id} className="border-b border-paper-line last:border-0 hover:bg-paper/40">
+                  <tr key={r.id} className="border-b border-paper-line last:border-0 align-top hover:bg-paper/40">
                     <td className="px-5 py-3.5">
                       <p className="font-semibold text-ink">{r.company_name}</p>
                       <p className="mt-0.5 flex items-center gap-3 text-xs text-ink-faint">
@@ -130,9 +157,25 @@ export default function Customers({ segment }) {
                         {r.contact_email && <span className="flex items-center gap-1"><Mail size={11} />{r.contact_email}</span>}
                       </p>
                     </td>
-                    <td className="px-5 py-3.5 max-w-[200px] text-ink-soft">{r.suitable_products || '—'}</td>
-                    <td className="px-5 py-3.5"><Badge className={sm.color}>{sm.label}</Badge></td>
-                    <td className="px-5 py-3.5 text-right">
+                    <td className="px-5 py-3.5 whitespace-nowrap"><Badge className={sm.color}>{sm.label}</Badge></td>
+                    <td className="px-5 py-3.5 min-w-[220px] max-w-[300px]">
+                      {history.length === 0 ? (
+                        <span className="text-ink-faint">—</span>
+                      ) : (
+                        <ul className="space-y-0.5 text-xs leading-relaxed">
+                          {history.slice(0, 4).map((h, i) => (
+                            <li key={i} className="text-ink-soft">
+                              <span className="text-ink-faint">{fmtDate(h.date)}:</span> {h.qty} {h.product}
+                            </li>
+                          ))}
+                          {history.length > 4 && <li className="text-ink-faint italic">+ {history.length - 4} lần khác</li>}
+                        </ul>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 min-w-[180px] max-w-[260px] text-xs leading-relaxed text-ink-soft whitespace-pre-wrap">
+                      {r.notes || '—'}
+                    </td>
+                    <td className="px-5 py-3.5 text-right whitespace-nowrap">
                       <div className="flex justify-end gap-1">
                         <button onClick={() => openEdit(r)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-ink"><Pencil size={15} /></button>
                         <button onClick={() => remove(r.id)} className="rounded-lg p-2 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><Trash2 size={15} /></button>
@@ -195,8 +238,39 @@ export default function Customers({ segment }) {
               {SALES_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
+
+          {/* Lịch sử sales */}
           <div className="col-span-2">
-            <label className="label-field">Mặt hàng phù hợp</label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="label-field mb-0">Lịch sử sales</label>
+              <button type="button" onClick={addHistory} className="text-xs font-semibold text-brand hover:underline">+ Thêm lần sale</button>
+            </div>
+            {(form.sales_history || []).length === 0 ? (
+              <p className="rounded-lg border border-dashed border-paper-line px-3 py-3 text-xs text-ink-faint">
+                Chưa có lần sale nào. Bấm "+ Thêm lần sale" để ghi nhận.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {form.sales_history.map((h, i) => (
+                  <div key={i} className="grid grid-cols-12 items-center gap-2">
+                    <input type="date" className="input-field col-span-3 py-2 text-sm"
+                      value={h.date || ''} onChange={(e) => updateHistory(i, 'date', e.target.value)} />
+                    <input className="input-field col-span-2 py-2 text-sm" placeholder="Số lượng"
+                      value={h.qty || ''} onChange={(e) => updateHistory(i, 'qty', e.target.value)} />
+                    <input className="input-field col-span-6 py-2 text-sm" placeholder="Mặt hàng (VD: 500 ổ điện OL212)"
+                      value={h.product || ''} onChange={(e) => updateHistory(i, 'product', e.target.value)} />
+                    <button type="button" onClick={() => removeHistory(i)}
+                      className="col-span-1 flex justify-center rounded-lg p-2 text-ink-faint hover:bg-rose-50 hover:text-rose-600">
+                      <X size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="col-span-2">
+            <label className="label-field">Mặt hàng phù hợp <span className="text-ink-faint">(tham khảo)</span></label>
             <input className="input-field" value={form.suitable_products} onChange={set('suitable_products')}
               placeholder="VD: Sạc dự phòng, ổ điện du lịch, sạc dây rút..." />
           </div>
