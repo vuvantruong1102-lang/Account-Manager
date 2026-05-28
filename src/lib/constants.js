@@ -1,10 +1,13 @@
 // Loại khách hàng với badge màu
 export const CUSTOMER_TYPES = [
-  { value: 'mice', label: 'Công ty MICE', color: 'bg-violet-100 text-violet-700 border-violet-200' },
+  { value: 'mice', label: 'MICE / Travel', color: 'bg-violet-100 text-violet-700 border-violet-200' },
   { value: 'corporate', label: 'Corporate', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { value: 'event', label: 'Công ty Event', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  { value: 'agency', label: 'Agency / Quà tặng', color: 'bg-teal-100 text-teal-700 border-teal-200' },
-  { value: 'retail', label: 'Bán lẻ', color: 'bg-pink-100 text-pink-700 border-pink-200' },
+  { value: 'event', label: 'Event / Marketing Agency', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  { value: 'agency', label: 'Công ty quà tặng DN', color: 'bg-teal-100 text-teal-700 border-teal-200' },
+  { value: 'retail', label: 'CH Điện thoại / Phụ kiện', color: 'bg-pink-100 text-pink-700 border-pink-200' },
+  { value: 'chain', label: 'Chuỗi cửa hàng', color: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200' },
+  { value: 'supermarket', label: 'Siêu thị', color: 'bg-lime-100 text-lime-700 border-lime-200' },
+  { value: 'distributor', label: 'Nhà phân phối', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
   { value: 'other', label: 'Khác', color: 'bg-gray-100 text-gray-600 border-gray-200' },
 ]
 
