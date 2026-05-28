@@ -144,18 +144,31 @@ export default function Customers({ segment }) {
                   <tr key={r.id} className="border-b border-paper-line last:border-0 align-top hover:bg-paper/40">
                     <td className="px-5 py-3.5">
                       <p className="font-semibold text-ink">{r.company_name}</p>
-                      <p className="mt-0.5 flex items-center gap-3 text-xs text-ink-faint">
-                        {r.address && <span className="flex items-center gap-1"><MapPin size={11} />{r.address}</span>}
-                        {r.tax_code && <span>MST: {r.tax_code}</span>}
-                      </p>
+                      {r.address && (
+                        <p className="mt-1 flex items-start gap-1 text-xs text-ink-faint">
+                          <MapPin size={11} className="mt-0.5 flex-shrink-0" />
+                          <span>{r.address}</span>
+                        </p>
+                      )}
+                      {r.tax_code && (
+                        <p className="mt-0.5 text-xs text-ink-faint">MST: {r.tax_code}</p>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap"><Badge className={`${tm.color} whitespace-nowrap`}>{tm.label}</Badge></td>
                     <td className="px-5 py-3.5">
                       <p className="text-ink">{r.contact_person || '—'}</p>
-                      <p className="mt-0.5 flex items-center gap-2 text-xs text-ink-faint">
-                        {r.contact_phone && <span className="flex items-center gap-1"><Phone size={11} />{r.contact_phone}</span>}
-                        {r.contact_email && <span className="flex items-center gap-1"><Mail size={11} />{r.contact_email}</span>}
-                      </p>
+                      {r.contact_phone && (
+                        <p className="mt-1 flex items-center gap-1 text-xs text-ink-faint">
+                          <Phone size={11} className="flex-shrink-0" />
+                          <span>{r.contact_phone}</span>
+                        </p>
+                      )}
+                      {r.contact_email && (
+                        <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-faint">
+                          <Mail size={11} className="flex-shrink-0" />
+                          <span>{r.contact_email}</span>
+                        </p>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap"><Badge className={sm.color}>{sm.label}</Badge></td>
                     <td className="px-5 py-3.5 min-w-[220px] max-w-[300px]">
