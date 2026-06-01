@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, FileDown, X, FileText, Pencil } from 'lucide-react'
+import { Plus, Trash2, FileDown, X, FileText, Pencil, FileSearch, ChevronDown } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { formatVND, formatDate } from '../lib/constants'
 import { Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
 import { exportQuotePDF } from '../lib/quotePdf'
+import { exportQuotePDFFull } from '../lib/quotePdfFull'
 
 const EMPTY = {
   quote_number: '', company_name: '', address: '', tax_code: '',
   contact_person: '', contact_email: '', vat_percent: 8, discount: 0,
   notes: '', valid_until: '',
-  items: [{ name: '', model: '', qty: 1, unit: 'cái', price: 0 }],
+  items: [{ name: '', short_name: '', model: '', qty: 1, unit: 'cái', price: 0 }],
 }
 
 export default function Quotes() {
@@ -26,7 +27,7 @@ export default function Quotes() {
     setLoading(true)
     const [{ data: q }, { data: p }] = await Promise.all([
       supabase.from('crm_quotes').select('*').order('created_at', { ascending: false }),
-      supabase.from('crm_products').select('name, sku, base_price, unit'),
+      supabase.from('crm_products').select('name, sku, base_price, unit, description, image_url, product_url'),
     ])
     setRows(q || []); setProducts(p || []); setLoading(false)
   }
@@ -40,7 +41,7 @@ export default function Quotes() {
       if (raw) {
         try {
           const pf = JSON.parse(raw)
-          setForm({ ...EMPTY, quote_number: genNumber(), ...pf, items: [{ name: '', model: '', qty: 1, unit: 'cái', price: 0 }] })
+          setForm({ ...EMPTY, quote_number: genNumber(), ...pf, items: [{ name: '', short_name: '', model: '', qty: 1, unit: 'cái', price: 0 }] })
           setEditId(null); setOpen(true)
         } catch (e) { /* noop */ }
         sessionStorage.removeItem('quote_prefill')
@@ -51,7 +52,7 @@ export default function Quotes() {
 
   const genNumber = () => 'BG-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.floor(Math.random() * 900 + 100)
 
-  const openNew = () => { setForm({ ...EMPTY, quote_number: genNumber(), items: [{ name: '', model: '', qty: 1, unit: 'cái', price: 0 }] }); setEditId(null); setOpen(true) }
+  const openNew = () => { setForm({ ...EMPTY, quote_number: genNumber(), items: [{ name: '', short_name: '', model: '', qty: 1, unit: 'cái', price: 0 }] }); setEditId(null); setOpen(true) }
   const openEdit = (r) => {
     setForm({ ...EMPTY, ...r, items: (r.items?.length ? r.items : EMPTY.items) }); setEditId(r.id); setOpen(true)
   }
@@ -69,7 +70,7 @@ export default function Quotes() {
       user_id: user.id, quote_number: form.quote_number, company_name: form.company_name,
       address: form.address, tax_code: form.tax_code, contact_person: form.contact_person,
       contact_email: form.contact_email,
-      items: form.items.filter((it) => it.name).map((it) => ({ name: it.name, model: it.model || '', qty: Number(it.qty) || 0, unit: it.unit, price: Number(it.price) || 0 })),
+      items: form.items.filter((it) => it.name).map((it) => ({ name: it.name, short_name: it.short_name || '', model: it.model || '', qty: Number(it.qty) || 0, unit: it.unit, price: Number(it.price) || 0 })),
       vat_percent: Number(form.vat_percent) || 0, discount: Number(form.discount) || 0,
       notes: form.notes, valid_until: form.valid_until || null,
     }
@@ -84,7 +85,7 @@ export default function Quotes() {
   }
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
-  const addItem = () => setForm({ ...form, items: [...form.items, { name: '', model: '', qty: 1, unit: 'cái', price: 0 }] })
+  const addItem = () => setForm({ ...form, items: [...form.items, { name: '', short_name: '', model: '', qty: 1, unit: 'cái', price: 0 }] })
   const updateItem = (i, k, v) => {
     const items = [...form.items]; items[i] = { ...items[i], [k]: v }
     if (k === 'model') {
@@ -146,7 +147,7 @@ export default function Quotes() {
                     <td className="px-5 py-3.5 text-ink-soft">{formatDate(r.created_at)}</td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => exportQuotePDF(r)} className="flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-semibold text-brand hover:bg-brand-100"><FileDown size={14} /> PDF</button>
+                        <PdfMenu quote={r} />
                         <button onClick={() => openEdit(r)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-ink"><Pencil size={15} /></button>
                         <button onClick={() => remove(r.id)} className="rounded-lg p-2 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><Trash2 size={15} /></button>
                       </div>
@@ -200,12 +201,13 @@ export default function Quotes() {
             </div>
             <p className="mb-2 text-xs text-ink-faint">Mẹo: gõ <b>mã sản phẩm</b> vào ô "Mã" để tự điền tên và đơn giá.</p>
 
-            <div className="overflow-hidden rounded-lg border border-paper-line">
+            <div className="overflow-x-auto rounded-lg border border-paper-line">
               {/* Header bảng */}
-              <div className="grid grid-cols-24 gap-1 border-b border-paper-line bg-paper/60 px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+              <div className="grid min-w-[800px] grid-cols-28 gap-1 border-b border-paper-line bg-paper/60 px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
                 <div className="col-span-1 text-center">#</div>
-                <div className="col-span-4">Mã</div>
-                <div className="col-span-7">Tên mặt hàng</div>
+                <div className="col-span-3">Mã</div>
+                <div className="col-span-7">Tên đầy đủ</div>
+                <div className="col-span-5">Tên rút gọn (PDF)</div>
                 <div className="col-span-2 text-center">SL</div>
                 <div className="col-span-2 text-center">ĐV</div>
                 <div className="col-span-4 text-right">Đơn giá</div>
@@ -214,12 +216,14 @@ export default function Quotes() {
               </div>
               {/* Các dòng */}
               {form.items.map((it, i) => (
-                <div key={i} className="grid grid-cols-24 items-center gap-1 border-b border-paper-line px-2 py-1.5 last:border-0">
+                <div key={i} className="grid min-w-[800px] grid-cols-28 items-center gap-1 border-b border-paper-line px-2 py-1.5 last:border-0">
                   <div className="col-span-1 text-center text-xs text-ink-faint">{i + 1}</div>
-                  <input className="input-field col-span-4 py-1.5 text-sm" list="sku-list" placeholder="Mã"
+                  <input className="input-field col-span-3 py-1.5 text-sm" list="sku-list" placeholder="Mã"
                     value={it.model || ''} onChange={(e) => updateItem(i, 'model', e.target.value)} />
-                  <input className="input-field col-span-7 py-1.5 text-sm" list="prod-list" placeholder="Tên mặt hàng"
+                  <input className="input-field col-span-7 py-1.5 text-sm" list="prod-list" placeholder="Tên đầy đủ"
                     value={it.name} onChange={(e) => updateItem(i, 'name', e.target.value)} />
+                  <input className="input-field col-span-5 py-1.5 text-sm" placeholder="Tên ngắn"
+                    value={it.short_name || ''} onChange={(e) => updateItem(i, 'short_name', e.target.value)} />
                   <input className="input-field col-span-2 py-1.5 text-center text-sm" type="number" placeholder="SL"
                     value={it.qty} onChange={(e) => updateItem(i, 'qty', e.target.value)} />
                   <input className="input-field col-span-2 py-1.5 text-center text-sm" placeholder="ĐV"
@@ -268,6 +272,50 @@ export default function Quotes() {
           <button className="btn-primary" onClick={save}>{editId ? 'Lưu' : 'Tạo báo giá'}</button>
         </div>
       </Modal>
+    </div>
+  )
+}
+
+// Dropdown nút PDF: rút gọn / đầy đủ (có/không tổng)
+function PdfMenu({ quote }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-semibold text-brand hover:bg-brand-100">
+        <FileDown size={14} /> PDF <ChevronDown size={11} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-lg border border-paper-line bg-white shadow-float">
+            <button onClick={() => { exportQuotePDF(quote); setOpen(false) }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-paper">
+              <FileText size={14} className="text-ink-faint" />
+              <div>
+                <p className="font-medium text-ink">Báo giá rút gọn</p>
+                <p className="text-[10px] text-ink-faint">A4 dọc, đơn giản</p>
+              </div>
+            </button>
+            <button onClick={() => { exportQuotePDFFull(quote, { showTotal: true }); setOpen(false) }}
+              className="flex w-full items-center gap-2 border-t border-paper-line px-3 py-2 text-left text-sm hover:bg-paper">
+              <FileSearch size={14} className="text-ink-faint" />
+              <div>
+                <p className="font-medium text-ink">Báo giá đầy đủ + Tổng</p>
+                <p className="text-[10px] text-ink-faint">Có ảnh, thông tin, link</p>
+              </div>
+            </button>
+            <button onClick={() => { exportQuotePDFFull(quote, { showTotal: false }); setOpen(false) }}
+              className="flex w-full items-center gap-2 border-t border-paper-line px-3 py-2 text-left text-sm hover:bg-paper">
+              <FileSearch size={14} className="text-ink-faint" />
+              <div>
+                <p className="font-medium text-ink">Báo giá đầy đủ (không tổng)</p>
+                <p className="text-[10px] text-ink-faint">Catalog báo giá tham khảo</p>
+              </div>
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
