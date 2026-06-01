@@ -101,12 +101,11 @@ export async function exportQuotePDFFull(quote, options = {}) {
   const cols = [
     { key: 'stt',    title: 'STT',           width: 10  },
     { key: 'img',    title: 'Ảnh',           width: 24  },
-    { key: 'name',   title: 'Tên sản phẩm',  width: 38  },
+    { key: 'name',   title: 'Tên sản phẩm',  width: 44  },
     { key: 'qty',    title: 'SL',            width: 14  },
     { key: 'price',  title: 'Giá bán (VAT)', width: 24  },
     { key: 'total',  title: 'Thành tiền',    width: 28  },
-    { key: 'model',  title: 'Model',         width: 18  },
-    { key: 'info',   title: 'Thông tin sản phẩm', width: 78 },
+    { key: 'info',   title: 'Thông tin sản phẩm', width: 88 },
     { key: 'link',   title: 'Link',          width: 38  },
   ]
 
@@ -118,7 +117,6 @@ export async function exportQuotePDFFull(quote, options = {}) {
     `${fmt(it.qty)} ${it.unit || ''}`.trim(),
     `${fmt(it.price)} đ`,
     `${fmt((Number(it.qty) || 0) * (Number(it.price) || 0))} đ`,
-    it.model || it.sku || '',
     it.description || '',
     it.product_url || '',
   ]))
@@ -138,9 +136,8 @@ export async function exportQuotePDFFull(quote, options = {}) {
       3: { halign: 'center', cellWidth: cols[3].width },
       4: { halign: 'right',  cellWidth: cols[4].width },
       5: { halign: 'right',  cellWidth: cols[5].width, fontStyle: 'bold' },
-      6: { halign: 'center', cellWidth: cols[6].width },
-      7: { halign: 'left',   cellWidth: cols[7].width, fontSize: 7.5 },
-      8: { halign: 'left',   cellWidth: cols[8].width, fontSize: 7, textColor: [70, 110, 200] },
+      6: { halign: 'left',   cellWidth: cols[6].width, fontSize: 7.5 },
+      7: { halign: 'left',   cellWidth: cols[7].width, fontSize: 7, textColor: [70, 110, 200] },
     },
     didDrawCell: (data) => {
       // Vẽ ảnh ở cột 1 (Ảnh sản phẩm)
