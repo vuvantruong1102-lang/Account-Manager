@@ -6,7 +6,7 @@ import { formatVND } from '../lib/constants'
 import { Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
 
 const EMPTY = {
-  name: '', sku: '', unit: 'cái', base_price: '',
+  name: '', short_name: '', sku: '', unit: 'cái', base_price: '',
   description: '', image_url: '', product_url: '',
   tiers: [],
 }
@@ -54,7 +54,7 @@ export default function Products() {
   const save = async () => {
     if (!form.name.trim()) return
     const payload = {
-      user_id: user.id, name: form.name, sku: form.sku, unit: form.unit,
+      user_id: user.id, name: form.name, short_name: form.short_name, sku: form.sku, unit: form.unit,
       base_price: Number(form.base_price) || 0,
       description: form.description, image_url: form.image_url, product_url: form.product_url,
       tiers: form.tiers.filter((t) => t.min_qty && t.price).map((t) => ({ min_qty: Number(t.min_qty), price: Number(t.price) })),
@@ -185,6 +185,10 @@ export default function Products() {
             <div>
               <label className="label-field">Tên sản phẩm *</label>
               <input className="input-field" value={form.name} onChange={set('name')} placeholder="VD: Sạc dự phòng 10000mAh" />
+            </div>
+            <div>
+              <label className="label-field">Tên rút gọn <span className="text-ink-faint">(hiện trong báo giá)</span></label>
+              <input className="input-field" value={form.short_name} onChange={set('short_name')} placeholder="VD: Sạc dự phòng JP395" />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
