@@ -106,7 +106,7 @@ export async function exportQuotePDFFull(quote, options = {}) {
     { key: 'price',  title: 'Giá bán (VAT)', width: 24  },
     { key: 'total',  title: 'Thành tiền',    width: 28  },
     { key: 'info',   title: 'Thông tin sản phẩm', width: 88 },
-    { key: 'link',   title: 'Link',          width: 38  },
+    { key: 'link',   title: 'Link',          width: 41  },
   ]
 
   const head = [cols.map((c) => c.title)]
