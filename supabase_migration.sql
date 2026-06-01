@@ -22,3 +22,7 @@ alter table crm_customers add column if not exists sales_history jsonb default '
 
 -- Website công ty
 alter table crm_customers add column if not exists website text;
+
+-- Sản phẩm: ảnh + link sản phẩm
+alter table crm_products add column if not exists image_url text;
+alter table crm_products add column if not exists product_url text;

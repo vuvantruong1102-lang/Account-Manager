@@ -37,6 +37,8 @@ create table if not exists crm_products (
   base_price numeric default 0,                  -- giá lẻ tham chiếu
   tiers jsonb default '[]'::jsonb,               -- [{min_qty, price}] giá bậc thang
   description text,
+  image_url text,                                -- ảnh sản phẩm (base64 data URL hoặc URL ngoài)
+  product_url text,                              -- link sản phẩm trên web Yokool
   created_at timestamptz default now()
 );
 
