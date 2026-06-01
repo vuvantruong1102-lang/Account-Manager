@@ -220,6 +220,8 @@ async function enrichItems(items) {
     const p = bySku[code]
     return {
       ...it,
+      // it.name đã là tên rút gọn; nếu trống thì lấy short_name/name của sản phẩm
+      short_name: it.short_name || it.name || p?.short_name || p?.name || '',
       sku: it.sku || p?.sku || '',
       description: it.description || p?.description || '',
       image_url: it.image_url || p?.image_url || '',
