@@ -19,9 +19,8 @@ const SELLER = {
 }
 const SIGNER = { name: 'VŨ VĂN CƯỜNG', title: 'GIÁM ĐỐC' }
 const FOOTER_NOTE = [
-  'Đơn giá đã bao gồm thuế VAT, phí vận chuyển.',
+  'Đơn giá đã bao gồm thuế VAT, phí vận chuyển, in logo theo yêu cầu của khách hàng.',
   'Chính sách bảo hành chính hãng 12 tháng.',
-  'Đơn giá áp dụng với khách hàng đại lý mua với số lượng từ 05-100 chiếc, đối với đơn hàng số lượng nhiều hơn sẽ được chiết khấu bổ sung theo thông báo kèm theo.',
   'Báo giá có giá trị trong vòng 15 ngày.',
 ]
 
