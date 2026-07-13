@@ -311,22 +311,22 @@ export function exportQuotePDF(quote) {
 
     // Chiều cao hàng đủ để ~3 sản phẩm/trang (vùng nội dung ~250mm / 3 ≈ 80mm)
     const ROW_H = 78
-    const detailBody = details.map((d) => [d.name || '', '', d.invoice_name || '', d.description || ''])
+    const detailBody = details.map((d) => [d.name || '', '', d.description || ''])
 
     autoTable(doc, {
       startY: py,
-      head: [['Tên sản phẩm', 'Ảnh', 'Tên trên hóa đơn', 'Thông số kỹ thuật']],
+      head: [['Tên sản phẩm', 'Ảnh', 'Thông số kỹ thuật']],
       body: detailBody,
       margin: { left: M, right: M, top: 30 },
       theme: 'grid',
       tableLineColor: [210, 210, 208], tableLineWidth: 0.1,
-      styles: { font: 'Roboto', fontSize: 8.5, cellPadding: 3, textColor: INK, lineColor: [225, 225, 223], lineWidth: 0.1, valign: 'middle', minCellHeight: ROW_H },
-      headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: INK, textColor: [255, 255, 255], fontSize: 9, halign: 'center', valign: 'middle' },
+      styles: { font: 'Roboto', fontSize: 8.5, cellPadding: 3, textColor: INK, lineColor: [225, 225, 223], lineWidth: 0.1, valign: 'middle' },
+      headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: INK, textColor: [255, 255, 255], fontSize: 9, halign: 'center', valign: 'middle', minCellHeight: 10, cellPadding: 3 },
+      bodyStyles: { minCellHeight: ROW_H },
       columnStyles: {
-        0: { cellWidth: 38, fontStyle: 'bold' },
-        1: { cellWidth: 40, halign: 'center' },
-        2: { cellWidth: 42 },
-        3: { cellWidth: 'auto', fontSize: 8 },
+        0: { cellWidth: 46, fontStyle: 'bold' },
+        1: { cellWidth: 68, halign: 'center' },
+        2: { cellWidth: 'auto' },
       },
       didDrawCell: (data) => {
         if (data.section === 'body' && data.column.index === 1) {
