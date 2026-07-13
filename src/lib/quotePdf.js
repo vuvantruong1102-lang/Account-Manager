@@ -19,18 +19,20 @@ const SELLER = {
 
 const INTRO = 'Cảm ơn Quý Công ty đã quan tâm và dành thời gian trao đổi với chúng tôi về các sản phẩm của Yokool. Chúng tôi xin được giới thiệu chi tiết sản phẩm kèm báo giá. Rất mong có cơ hội được hợp tác với Quý Công ty!'
 
-const FOOTER_NOTE = [
-  'Đơn giá chưa bao gồm thuế VAT (VAT được tính riêng theo từng mặt hàng).',
-  'Chính sách bảo hành chính hãng 12 tháng.',
-  'Đối với đơn hàng số lượng lớn hơn, vui lòng liên hệ chúng tôi để có giá tốt hơn.',
-  'Báo giá có giá trị trong vòng 15 ngày.',
-  'Liên hệ: Mr. Trường - Sales Manager: 0906 079 936',
-]
+// Lưu ý mặc định (dùng khi báo giá không có ghi chú riêng)
+const DEFAULT_NOTES = [
+  '- Đơn giá đã bao gồm thuế VAT',
+  '- Chính sách bảo hành chính hãng 12 tháng.',
+  '- Đối với đơn hàng số lượng lớn hơn, vui lòng liên hệ chúng tôi để có giá tốt hơn.',
+  '- Báo giá có giá trị trong vòng 15 ngày.',
+  '- Liên hệ: Mr. Trường - Sales Manager: 0906 079 936',
+].join('\n')
 
 const SIGNER = { name: 'Vũ Văn Cường', title: 'Giám đốc' }
 
 const fmt = (n) => (Number(n) || 0).toLocaleString('vi-VN')
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN') : ''
+const imgFmt = (url) => (url && url.startsWith('data:image/png')) ? 'PNG' : 'JPEG'
 
 function addFonts(doc) {
   doc.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR)
@@ -40,7 +42,7 @@ function addFonts(doc) {
   doc.setFont('Roboto', 'normal')
 }
 
-// Header dùng chung cho cả 2 trang
+// Header dùng chung cho cả 2 phần
 function drawHeader(doc, W, M) {
   let y = 14
   const titleH = 6.5
@@ -66,6 +68,58 @@ function drawHeader(doc, W, M) {
   doc.text(`Email: ${SELLER.email}  •  Website: ${SELLER.website}`, infoLeft, ry)
 
   return Math.max(ry, y + 6) + 4
+}
+
+// Vẽ 1 khối "chi tiết sản phẩm" (ảnh trái + tên/tên hóa đơn/thông số phải).
+// Trả về py mới (đã cộng khoảng cách dưới). Tự sang trang nếu tràn.
+function drawProductCard(doc, W, H, M, py, item) {
+  const contentW = W - 2 * M - 52
+  doc.setFont('Roboto', 'normal').setFontSize(8.5)
+  const specLines = item.description ? doc.splitTextToSize(item.description, contentW) : []
+  const invoiceLines = doc.splitTextToSize(`Tên trên hóa đơn: ${item.invoice_name || item.name || ''}`, contentW)
+  const nameLines = doc.splitTextToSize(String(item.name || ''), contentW)
+
+  const textH = 4 + nameLines.length * 5.5 + invoiceLines.length * 4.4 + 2 + (specLines.length ? 5 + specLines.length * 4.4 : 0) + 4
+  const imgH = 44
+  const cardH = Math.max(textH, imgH)
+
+  if (py + cardH > H - 15) { doc.addPage(); py = drawHeader(doc, W, M) + 8 }
+
+  const cardTop = py
+  doc.setDrawColor(225, 225, 223).setLineWidth(0.2)
+  doc.roundedRect(M, cardTop, W - 2 * M, cardH, 2, 2)
+
+  // Ảnh (trái)
+  const imgX = M + 4, imgY = cardTop + 4, imgBoxW = 40, imgBoxH = cardH - 8
+  if (item.image_url) {
+    try {
+      const props = doc.getImageProperties(item.image_url)
+      const ratio = props.width / props.height
+      let w = imgBoxW, h = imgBoxW / ratio
+      if (h > imgBoxH) { h = imgBoxH; w = imgBoxH * ratio }
+      doc.addImage(item.image_url, imgFmt(item.image_url), imgX + (imgBoxW - w) / 2, imgY + (imgBoxH - h) / 2, w, h)
+    } catch (e) {}
+  } else {
+    doc.setFont('Roboto', 'normal').setFontSize(7).setTextColor(...SOFT)
+    doc.text('(chưa có ảnh)', imgX + imgBoxW / 2, imgY + imgBoxH / 2, { align: 'center' })
+  }
+
+  // Nội dung (phải)
+  const tx = M + 52
+  let tyy = cardTop + 8
+  doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...INK)
+  nameLines.forEach((ln) => { doc.text(ln, tx, tyy); tyy += 5.5 })
+  doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
+  invoiceLines.forEach((ln) => { doc.text(ln, tx, tyy); tyy += 4.4 })
+  tyy += 2
+  if (specLines.length > 0) {
+    doc.setFont('Roboto', 'bold').setFontSize(8.5).setTextColor(...INK)
+    doc.text('Thông số kỹ thuật:', tx, tyy); tyy += 4.4
+    doc.setFont('Roboto', 'normal').setTextColor(...SOFT)
+    specLines.forEach((ln) => { doc.text(ln, tx, tyy); tyy += 4.4 })
+  }
+
+  return cardTop + cardH + 6
 }
 
 export function exportQuotePDF(quote) {
@@ -102,23 +156,18 @@ export function exportQuotePDF(quote) {
 
   cy += 2
   doc.setFont('Roboto', 'normal').setFontSize(9.5).setTextColor(...INK)
-  const introLines = doc.splitTextToSize(INTRO, W - 2 * M)
-  introLines.forEach((ln) => { doc.text(ln, M, cy); cy += 5 })
+  doc.splitTextToSize(INTRO, W - 2 * M).forEach((ln) => { doc.text(ln, M, cy); cy += 5 })
   y = cy + 4
 
-  // Bảng: STT | Ảnh | Tên sản phẩm/set | SL | Đơn giá | VAT | Thành tiền
+  // Bảng: STT | Ảnh | Tên | SL | Đơn giá | VAT | Thành tiền
   const items = quote.items || []
   const body = items.map((it, i) => {
     const base = (Number(it.qty) || 0) * (Number(it.price) || 0)
     const total = base + base * (Number(it.vat) || 0) / 100
     return [
-      String(i + 1),
-      '', // ảnh - vẽ trong didDrawCell
-      it.name || '',
+      String(i + 1), '', it.name || '',
       `${fmt(it.qty)} ${it.unit || ''}`.trim(),
-      `${fmt(it.price)} đ`,
-      `${Number(it.vat) || 0}%`,
-      `${fmt(total)} đ`,
+      `${fmt(it.price)} đ`, `${Number(it.vat) || 0}%`, `${fmt(total)} đ`,
     ]
   })
 
@@ -128,8 +177,7 @@ export function exportQuotePDF(quote) {
     body,
     margin: { left: M, right: M },
     theme: 'grid',
-    tableLineColor: [210, 210, 208],
-    tableLineWidth: 0.1,
+    tableLineColor: [210, 210, 208], tableLineWidth: 0.1,
     styles: { font: 'Roboto', fontSize: 9, cellPadding: 2.5, textColor: INK, lineColor: [225, 225, 223], lineWidth: 0.1, valign: 'middle' },
     headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: INK, textColor: [255, 255, 255], fontSize: 9, halign: 'center' },
     columnStyles: {
@@ -154,10 +202,7 @@ export function exportQuotePDF(quote) {
             const ratio = props.width / props.height
             let w = maxW, h = maxW / ratio
             if (h > maxH) { h = maxH; w = maxH * ratio }
-            const x = data.cell.x + (data.cell.width - w) / 2
-            const yi = data.cell.y + (data.cell.height - h) / 2
-            const f = it.image_url.startsWith('data:image/png') ? 'PNG' : 'JPEG'
-            doc.addImage(it.image_url, f, x, yi, w, h)
+            doc.addImage(it.image_url, imgFmt(it.image_url), data.cell.x + (data.cell.width - w) / 2, data.cell.y + (data.cell.height - h) / 2, w, h)
           } catch (e) {}
         }
       }
@@ -165,7 +210,7 @@ export function exportQuotePDF(quote) {
     rowPageBreak: 'avoid',
   })
 
-  // Tổng kết: đơn giá chưa VAT → cộng VAT từng dòng
+  // Tổng kết
   let sub = 0, vatTotal = 0
   items.forEach((it) => {
     const base = (Number(it.qty) || 0) * (Number(it.price) || 0)
@@ -191,27 +236,16 @@ export function exportQuotePDF(quote) {
   line('TỔNG CỘNG:', `${fmt(total)} đ`, true, INK)
   const afterTotalY = ty
 
-  // Ghi chú (hiện dưới bảng)
-  let gy = afterTotalY
-  if (quote.notes) {
-    gy += 4
-    doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
-    doc.text('Ghi chú:', M, gy)
-    doc.setFont('Roboto', 'normal').setTextColor(...SOFT)
-    const split = doc.splitTextToSize(quote.notes, W - 2 * M)
-    doc.text(split, M, gy + 5)
-    gy += 5 + split.length * 5
-  }
-
-  // Lưu ý
-  let ny = Math.max(afterTotalY + 20, gy + 4)
+  // ===== Lưu ý (gộp ghi chú + lưu ý) =====
+  const noteText = (quote.notes && quote.notes.trim()) ? quote.notes : DEFAULT_NOTES
+  let ny = afterTotalY + 8
   if (ny + 45 > H) { doc.addPage(); ny = 20 }
   doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
   doc.text('Lưu ý:', M, ny)
   ny += 5
   doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
-  FOOTER_NOTE.forEach((n) => {
-    const lines = doc.splitTextToSize(`-  ${n}`, W - 2 * M - 55)
+  noteText.split('\n').forEach((raw) => {
+    const lines = doc.splitTextToSize(raw, W - 2 * M - 55)
     doc.text(lines, M, ny)
     ny += lines.length * 4.5
   })
@@ -231,9 +265,14 @@ export function exportQuotePDF(quote) {
   doc.text('Chữ ký và dấu', sigLeftX, sigY + 14)
   doc.setDrawColor(...INK).setLineWidth(0.3).line(sigValX, sigY + 15, sigValX + 42, sigY + 15)
 
-  // ============ PHẦN 2: THÔNG TIN SẢN PHẨM (trang tiếp theo) ============
+  // ============ PHẦN 2: THÔNG TIN SẢN PHẨM ============
   const infoItems = items.filter((it) => it.name)
-  if (infoItems.length > 0) {
+  const sets = infoItems.filter((it) => it.kind === 'set')
+  const singles = infoItems.filter((it) => it.kind !== 'set')
+
+  // 2a) Mỗi set quà = 1 trang riêng (tên set + thành phần + ảnh minh họa),
+  //     tiếp theo là chi tiết từng sản phẩm thành phần.
+  sets.forEach((it) => {
     doc.addPage()
     let py = drawHeader(doc, W, M)
     py += 12
@@ -241,60 +280,78 @@ export function exportQuotePDF(quote) {
     doc.text('THÔNG TIN SẢN PHẨM', W / 2, py, { align: 'center' })
     py += 10
 
-    const CARD_GAP = 6
-    infoItems.forEach((it, idx) => {
-      // Ước lượng chiều cao card
-      doc.setFont('Roboto', 'normal').setFontSize(8.5)
-      const specLines = it.description ? doc.splitTextToSize(it.description, W - 2 * M - 52) : []
-      const textH = 14 + specLines.length * 4.4 // tên + tên hóa đơn + specs
-      const imgH = 40
-      const cardH = Math.max(textH, imgH) + 8
+    // Tên set + tên hóa đơn
+    doc.setFont('Roboto', 'bold').setFontSize(13).setTextColor(...INK)
+    doc.splitTextToSize(String(it.name || ''), W - 2 * M).forEach((ln) => { doc.text(ln, M, py); py += 6.5 })
+    doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...SOFT)
+    doc.splitTextToSize(`Tên trên hóa đơn: ${it.invoice_name || it.name || ''}`, W - 2 * M).forEach((ln) => { doc.text(ln, M, py); py += 5 })
+    py += 2
 
-      // Sang trang nếu tràn
-      if (py + cardH > H - 15) { doc.addPage(); py = drawHeader(doc, W, M) + 8 }
+    // Thành phần
+    const lines = (it.set_lines && it.set_lines.length)
+      ? it.set_lines.map((c) => `• ${c.qty}× ${c.name}`)
+      : (it.description ? it.description.split('\n') : [])
+    if (lines.length) {
+      doc.setFont('Roboto', 'bold').setFontSize(9.5).setTextColor(...INK)
+      doc.text('Thành phần:', M, py); py += 5.5
+      doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...SOFT)
+      lines.forEach((ln) => {
+        doc.splitTextToSize(ln, W - 2 * M).forEach((l) => { doc.text(l, M, py); py += 5 })
+      })
+    }
+    py += 4
 
-      const cardTop = py
-      // Khung card
-      doc.setDrawColor(225, 225, 223).setLineWidth(0.2)
-      doc.roundedRect(M, cardTop, W - 2 * M, cardH, 2, 2)
-
-      // Ảnh minh họa (bên trái)
-      const imgX = M + 4, imgY = cardTop + 4, imgBoxW = 40, imgBoxH = cardH - 8
-      if (it.image_url) {
+    // Ảnh minh họa set (ảnh đại diện + gallery), xếp hàng ngang
+    const gallery = [it.image_url, ...(it.gallery || [])].filter(Boolean)
+    if (gallery.length) {
+      const boxH = 46, gap = 6
+      const boxW = Math.min(70, (W - 2 * M - gap * (gallery.length - 1)) / gallery.length)
+      if (py + boxH > H - 15) { doc.addPage(); py = drawHeader(doc, W, M) + 8 }
+      let gx = M
+      gallery.slice(0, 3).forEach((g) => {
         try {
-          const props = doc.getImageProperties(it.image_url)
+          const props = doc.getImageProperties(g)
           const ratio = props.width / props.height
-          let w = imgBoxW, h = imgBoxW / ratio
-          if (h > imgBoxH) { h = imgBoxH; w = imgBoxH * ratio }
-          const x = imgX + (imgBoxW - w) / 2
-          const yi = imgY + (imgBoxH - h) / 2
-          const f = it.image_url.startsWith('data:image/png') ? 'PNG' : 'JPEG'
-          doc.addImage(it.image_url, f, x, yi, w, h)
+          let w = boxW, h = boxW / ratio
+          if (h > boxH) { h = boxH; w = boxH * ratio }
+          doc.addImage(g, imgFmt(g), gx + (boxW - w) / 2, py + (boxH - h) / 2, w, h)
         } catch (e) {}
-      } else {
-        doc.setFont('Roboto', 'normal').setFontSize(7).setTextColor(...SOFT)
-        doc.text('(chưa có ảnh)', imgX + imgBoxW / 2, imgY + imgBoxH / 2, { align: 'center' })
-      }
+        gx += boxW + gap
+      })
+      py += boxH + 8
+    }
 
-      // Nội dung (bên phải)
-      const tx = M + 52
-      let tyy = cardTop + 8
-      doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...INK)
-      doc.text(String(it.name || ''), tx, tyy)
-      tyy += 6
-      doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
-      doc.text(`Tên trên hóa đơn: ${it.invoice_name || it.name || ''}`, tx, tyy)
-      tyy += 6
-      if (specLines.length > 0) {
-        doc.setFont('Roboto', 'bold').setFontSize(8.5).setTextColor(...INK)
-        doc.text('Thông số kỹ thuật:', tx, tyy)
-        tyy += 4.4
-        doc.setFont('Roboto', 'normal').setTextColor(...SOFT)
-        specLines.forEach((ln) => { doc.text(ln, tx, tyy); tyy += 4.4 })
-      }
+    // Chi tiết từng sản phẩm thành phần
+    const comps = it.set_components || []
+    if (comps.length) {
+      doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...BRAND)
+      if (py + 12 > H - 15) { doc.addPage(); py = drawHeader(doc, W, M) + 8 }
+      doc.text('Chi tiết sản phẩm trong set', M, py); py += 7
+      comps.forEach((c) => {
+        py = drawProductCard(doc, W, H, M, py, {
+          name: c.name, invoice_name: c.invoice_name, description: c.description, image_url: c.image_url,
+        })
+      })
+    }
+  })
 
-      py = cardTop + cardH + CARD_GAP
-    })
+  // 2b) Sản phẩm lẻ: gộp dạng card (nhiều sản phẩm chung trang)
+  if (singles.length) {
+    doc.addPage()
+    let py = drawHeader(doc, W, M)
+    py += 12
+    doc.setFont('Roboto', 'bold').setFontSize(18).setTextColor(...BRAND)
+    doc.text('THÔNG TIN SẢN PHẨM', W / 2, py, { align: 'center' })
+    py += 10
+    singles.forEach((it) => { py = drawProductCard(doc, W, H, M, py, it) })
+  }
+
+  // ============ ĐÁNH SỐ TRANG (góc dưới phải) ============
+  const pageCount = doc.internal.getNumberOfPages()
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p)
+    doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT)
+    doc.text(`Trang ${p}/${pageCount}`, W - M, H - 8, { align: 'right' })
   }
 
   doc.save(`${quote.quote_number || 'bao-gia'}.pdf`)
