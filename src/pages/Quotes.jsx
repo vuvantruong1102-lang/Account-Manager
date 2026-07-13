@@ -427,12 +427,6 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
             </div>
           </div>
 
-          {/* Ghi chú của dòng (hiện ở cột Ghi chú trên bảng báo giá) */}
-          <div>
-            <label className="text-[11px] font-medium text-ink-faint">Ghi chú <span className="text-ink-faint">(hiện ở cột Ghi chú trong bảng báo giá)</span></label>
-            <input className="input-field py-1.5 text-sm" value={item.note} onChange={set('note')} placeholder="VD: In logo, màu theo yêu cầu..." />
-          </div>
-
           {/* Thông số kỹ thuật (hiện ở phần 2) */}
           <div>
             <label className="text-[11px] font-medium text-ink-faint">Thông số kỹ thuật <span className="text-ink-faint">(hiện ở Phần 2 — Thông tin sản phẩm)</span></label>
