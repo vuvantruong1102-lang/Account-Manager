@@ -285,7 +285,7 @@ function SetsTab({ sets, products, loading, reload, user }) {
 
   const save = async () => {
     if (!form.name.trim()) { alert('Nhập tên set quà'); return }
-    if (form.items.length < 2) { alert('Set quà cần ít nhất 2 sản phẩm'); return }
+    if (form.items.length < 1) { alert('Set quà cần ít nhất 1 sản phẩm'); return }
     if (form.items.length > 3) { alert('Set quà tối đa 3 sản phẩm'); return }
     const payload = {
       user_id: user.id, name: form.name, short_name: form.short_name, invoice_name: form.invoice_name,
@@ -359,15 +359,15 @@ function SetsTab({ sets, products, loading, reload, user }) {
   return (
     <div>
       <div className="mb-4 flex justify-end">
-        <button className="btn-primary" onClick={openNew} disabled={products.length < 2}><Plus size={16} /> Tạo set quà</button>
+        <button className="btn-primary" onClick={openNew} disabled={products.length < 1}><Plus size={16} /> Tạo set quà</button>
       </div>
-      {products.length < 2 && (
-        <p className="mb-4 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-700">Cần ít nhất 2 sản phẩm trong danh mục để tạo set quà.</p>
+      {products.length < 1 && (
+        <p className="mb-4 rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-700">Cần ít nhất 1 sản phẩm trong danh mục để tạo set quà.</p>
       )}
 
       {loading ? <Spinner /> : sets.length === 0 ? (
         <EmptyState icon={Gift} title="Chưa có set quà nào"
-          hint="Combo 2–3 sản phẩm, tự đặt tên và tự cộng giá thành phần."
+          hint="Combo 1–3 sản phẩm, tự đặt tên và tự cộng giá thành phần."
           action={products.length >= 2 ? <button className="btn-primary" onClick={openNew}><Plus size={16} /> Tạo set quà</button> : null} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -458,7 +458,7 @@ function SetsTab({ sets, products, loading, reload, user }) {
           {/* Chọn sản phẩm thành phần */}
           <div className="md:col-span-3">
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="label-field mb-0">Sản phẩm trong set <span className="text-ink-faint">(2–3 sản phẩm)</span></label>
+              <label className="label-field mb-0">Sản phẩm trong set <span className="text-ink-faint">(1–3 sản phẩm)</span></label>
               <span className="text-xs text-ink-faint">{form.items.length}/3</span>
             </div>
 
