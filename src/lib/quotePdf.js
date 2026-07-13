@@ -221,19 +221,17 @@ export function exportQuotePDF(quote) {
   const sets = infoItems.filter((it) => it.kind === 'set')
   const singles = infoItems.filter((it) => it.kind !== 'set')
 
-  // 2a) Mỗi set quà = 1 trang riêng: chỉ thành phần + ảnh minh họa (to)
+  // 2a) Mỗi set quà = 1 trang riêng
   sets.forEach((it) => {
     doc.addPage()
     let py = drawHeader(doc, W, M)
     py += 12
-    doc.setFont('Roboto', 'bold').setFontSize(18).setTextColor(...BRAND)
-    doc.text('THÔNG TIN SET QUÀ', W / 2, py, { align: 'center' })
-    py += 12
-
-    // Tên set
-    doc.setFont('Roboto', 'bold').setFontSize(14).setTextColor(...INK)
-    doc.splitTextToSize(String(it.name || ''), W - 2 * M).forEach((ln) => { doc.text(ln, M, py); py += 7 })
-    py += 3
+    // Tên set thay cho tiêu đề "THÔNG TIN SET QUÀ" — căn giữa, đậm
+    doc.setFont('Roboto', 'bold').setFontSize(17).setTextColor(...BRAND)
+    doc.splitTextToSize(String(it.name || 'THÔNG TIN SET QUÀ'), W - 2 * M).forEach((ln) => {
+      doc.text(ln, W / 2, py, { align: 'center' }); py += 8
+    })
+    py += 5
 
     // Thông số / mô tả set (nhập ở panel Sản phẩm) — đã bao gồm thành phần nên bỏ mục "Thành phần"
     if (it.set_desc && it.set_desc.trim()) {
@@ -305,25 +303,19 @@ export function exportQuotePDF(quote) {
         let gx = M
         subImgs.slice(0, 3).forEach((g) => { drawFit(g, gx, py, bw, bh); gx += bw + gap })
       } else {
-        // Ảnh chính TO ở trên + ảnh minh họa (~50% ảnh chính) ở dưới, sát nhau cho gọn
-        const rowGap = 10
-        // Ảnh chính chiếm ~80% chiều cao khả dụng (to hơn ~30% so với trước)
-        const topBoxH = (availH - rowGap) * 0.80
-        const main = drawFit(mainImg, M, py, fullW, topBoxH)
-
-        // Ảnh minh họa: các ô BẰNG NHAU, mỗi ô = 50% kích thước ảnh chính, căn giữa cụm
+        // Ảnh chính ở trên + ảnh minh họa TO ở dưới (mỗi ô chiếm cả hàng dưới)
+        const rowGap = 12
         const n = Math.min(subImgs.length, 3)
-        let subW = main.w * 0.5
-        let subH = main.h * 0.5
-        const maxSubW = (fullW - gap * (n - 1)) / n   // không tràn hàng
-        if (subW > maxSubW) { const k = maxSubW / subW; subW = maxSubW; subH = subH * k }
-        // Giới hạn chiều cao ô phụ để không tràn xuống chân trang
-        const subAvailH = (H - 15) - (py + topBoxH + rowGap)
-        if (subH > subAvailH) { const k = subAvailH / subH; subH = subAvailH; subW = subW * k }
+        // Chia trang: ảnh chính ~54% chiều cao, ảnh minh họa ~46% → ảnh phụ to hơn ~3 lần
+        const topBoxH = (availH - rowGap) * 0.54
+        const botBoxH = (availH - rowGap) * 0.46
+        drawFit(mainImg, M, py, fullW, topBoxH)
+
+        // Ảnh minh họa: các ô BẰNG NHAU, chia đều bề ngang, cao hết hàng dưới
+        const subW = (fullW - gap * (n - 1)) / n
         const by = py + topBoxH + rowGap
-        const totalW = subW * n + gap * (n - 1)
-        let bx = M + (fullW - totalW) / 2
-        subImgs.slice(0, 3).forEach((g) => { drawFit(g, bx, by, subW, subH); bx += subW + gap })
+        let bx = M
+        subImgs.slice(0, 3).forEach((g) => { drawFit(g, bx, by, subW, botBoxH); bx += subW + gap })
       }
     }
   })
