@@ -235,21 +235,7 @@ export function exportQuotePDF(quote) {
     doc.splitTextToSize(String(it.name || ''), W - 2 * M).forEach((ln) => { doc.text(ln, M, py); py += 7 })
     py += 3
 
-    // Thành phần
-    const lines = (it.set_lines && it.set_lines.length)
-      ? it.set_lines.map((c) => `• ${c.qty}× ${c.name}`)
-      : (it.description ? it.description.split('\n') : [])
-    if (lines.length) {
-      doc.setFont('Roboto', 'bold').setFontSize(10.5).setTextColor(...INK)
-      doc.text('Thành phần:', M, py); py += 6
-      doc.setFont('Roboto', 'normal').setFontSize(10).setTextColor(...SOFT)
-      lines.forEach((ln) => {
-        doc.splitTextToSize(ln, W - 2 * M).forEach((l) => { doc.text(l, M, py); py += 5.5 })
-      })
-    }
-    py += 4
-
-    // Thông số / mô tả set (nhập ở panel Sản phẩm)
+    // Thông số / mô tả set (nhập ở panel Sản phẩm) — đã bao gồm thành phần nên bỏ mục "Thành phần"
     if (it.set_desc && it.set_desc.trim()) {
       doc.setFont('Roboto', 'bold').setFontSize(10.5).setTextColor(...INK)
       doc.text('Mô tả:', M, py); py += 6
@@ -258,8 +244,35 @@ export function exportQuotePDF(quote) {
         doc.splitTextToSize(ln, W - 2 * M).forEach((l) => { doc.text(l, M, py); py += 5.5 })
       })
       py += 2
+    } else {
+      // Nếu không có mô tả riêng, dùng danh sách thành phần làm nội dung
+      const lines = (it.set_lines && it.set_lines.length)
+        ? it.set_lines.map((c) => `• ${c.qty}× ${c.name}`)
+        : (it.description ? it.description.split('\n') : [])
+      if (lines.length) {
+        doc.setFont('Roboto', 'bold').setFontSize(10.5).setTextColor(...INK)
+        doc.text('Thành phần:', M, py); py += 6
+        doc.setFont('Roboto', 'normal').setFontSize(10).setTextColor(...SOFT)
+        lines.forEach((ln) => {
+          doc.splitTextToSize(ln, W - 2 * M).forEach((l) => { doc.text(l, M, py); py += 5.5 })
+        })
+        py += 2
+      }
     }
-    py += 2
+
+    // Giá set (theo chế độ báo giá: so sánh → đã gồm VAT)
+    {
+      const setUnit = (Number(it.price) || 0) * vatMul
+      if (setUnit > 0) {
+        doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...INK)
+        doc.text('Giá set:', M, py)
+        doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...BRAND)
+        const priceLabel = `${fmt(Math.round(setUnit))} đ / ${it.unit || 'set'}` + (cmp ? ' (đã gồm VAT)' : ' (chưa VAT)')
+        doc.text(priceLabel, M + 20, py)
+        py += 7
+      }
+    }
+    py += 3
 
     // Ảnh: ảnh CHÍNH (đại diện set) to ở trên; ảnh MINH HỌA (gallery) nhỏ hơn ở dưới
     const mainImg = it.image_url || null
@@ -292,17 +305,21 @@ export function exportQuotePDF(quote) {
         let gx = M
         subImgs.slice(0, 3).forEach((g) => { drawFit(g, gx, py, bw, bh); gx += bw + gap })
       } else {
-        // Ảnh chính TO ở trên (~70% chiều cao còn lại) + ảnh minh họa 60% ở dưới
-        const rowGap = 12
-        const topBoxH = (availH - rowGap) * 0.70
+        // Ảnh chính TO ở trên + ảnh minh họa (~50% ảnh chính) ở dưới, sát nhau cho gọn
+        const rowGap = 10
+        // Ảnh chính chiếm ~80% chiều cao khả dụng (to hơn ~30% so với trước)
+        const topBoxH = (availH - rowGap) * 0.80
         const main = drawFit(mainImg, M, py, fullW, topBoxH)
 
-        // Ảnh minh họa: mỗi ô = 60% kích thước ảnh chính thực vẽ, căn giữa cụm
+        // Ảnh minh họa: các ô BẰNG NHAU, mỗi ô = 50% kích thước ảnh chính, căn giữa cụm
         const n = Math.min(subImgs.length, 3)
-        let subW = main.w * 0.6
-        let subH = main.h * 0.6
+        let subW = main.w * 0.5
+        let subH = main.h * 0.5
         const maxSubW = (fullW - gap * (n - 1)) / n   // không tràn hàng
         if (subW > maxSubW) { const k = maxSubW / subW; subW = maxSubW; subH = subH * k }
+        // Giới hạn chiều cao ô phụ để không tràn xuống chân trang
+        const subAvailH = (H - 15) - (py + topBoxH + rowGap)
+        if (subH > subAvailH) { const k = subAvailH / subH; subH = subAvailH; subW = subW * k }
         const by = py + topBoxH + rowGap
         const totalW = subW * n + gap * (n - 1)
         let bx = M + (fullW - totalW) / 2
