@@ -13,7 +13,7 @@ const EMPTY = {
 
 const EMPTY_SET = {
   name: '', short_name: '', invoice_name: '', sku: '', unit: 'set',
-  price: '', auto_price: true, items: [], description: '', image_url: '',
+  price: '', auto_price: true, items: [], description: '', image_url: '', gallery: [],
 }
 
 // Nén ảnh client-side: resize max 400px, JPEG quality 75 → ra base64
@@ -273,9 +273,10 @@ function SetsTab({ sets, products, loading, reload, user }) {
   const [uploading, setUploading] = useState(false)
   const [picker, setPicker] = useState('')
   const fileRef = useRef(null)
+  const galleryRef = useRef(null)
 
   const openNew = () => { setForm(EMPTY_SET); setEditId(null); setPicker(''); setOpen(true) }
-  const openEdit = (r) => { setForm({ ...EMPTY_SET, ...r, items: r.items || [] }); setEditId(r.id); setPicker(''); setOpen(true) }
+  const openEdit = (r) => { setForm({ ...EMPTY_SET, ...r, items: r.items || [], gallery: r.gallery || [] }); setEditId(r.id); setPicker(''); setOpen(true) }
 
   const componentsTotal = (items) => items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0)
   const effectivePrice = (f) => f.auto_price ? componentsTotal(f.items) : (Number(f.price) || 0)
@@ -293,6 +294,7 @@ function SetsTab({ sets, products, loading, reload, user }) {
         qty: Number(it.qty) || 1, price: Number(it.price) || 0, image_url: it.image_url || '',
       })),
       description: form.description, image_url: form.image_url,
+      gallery: (form.gallery || []).filter(Boolean).slice(0, 2),
     }
     const { error } = editId
       ? await supabase.from('crm_gift_sets').update(payload).eq('id', editId)
@@ -316,6 +318,17 @@ function SetsTab({ sets, products, loading, reload, user }) {
     catch (err) { alert('Không đọc được ảnh: ' + err.message) }
     finally { setUploading(false); e.target.value = '' }
   }
+
+  const onPickGallery = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return
+    setUploading(true)
+    try {
+      const img = await compressImage(file)
+      setForm((f) => ({ ...f, gallery: [...(f.gallery || []), img].slice(0, 2) }))
+    } catch (err) { alert('Không đọc được ảnh: ' + err.message) }
+    finally { setUploading(false); e.target.value = '' }
+  }
+  const removeGallery = (i) => setForm((f) => ({ ...f, gallery: (f.gallery || []).filter((_, j) => j !== i) }))
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
@@ -485,6 +498,30 @@ function SetsTab({ sets, products, loading, reload, user }) {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Ảnh minh họa thêm cho set (tối đa 2, hiện ở trang Thông tin sản phẩm) */}
+          <div className="md:col-span-3">
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="label-field mb-0">Ảnh minh họa set <span className="text-ink-faint">(tối đa 2 — hiện ở trang Thông tin sản phẩm)</span></label>
+              <span className="text-xs text-ink-faint">{(form.gallery || []).length}/2</span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {(form.gallery || []).map((g, i) => (
+                <div key={i} className="relative h-24 w-24 overflow-hidden rounded-lg border border-paper-line bg-paper">
+                  <img src={g} alt="" className="h-full w-full object-contain" />
+                  <button onClick={() => removeGallery(i)} className="absolute right-1 top-1 rounded-full bg-white/90 p-0.5 text-ink-faint hover:text-rose-600"><X size={13} /></button>
+                </div>
+              ))}
+              {(form.gallery || []).length < 2 && (
+                <button onClick={() => galleryRef.current?.click()} disabled={uploading}
+                  className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-paper-line text-ink-faint hover:text-brand">
+                  <Upload size={18} />
+                  <span className="text-[10px]">{uploading ? '...' : 'Thêm ảnh'}</span>
+                </button>
+              )}
+              <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={onPickGallery} />
+            </div>
           </div>
 
           {/* Giá set */}

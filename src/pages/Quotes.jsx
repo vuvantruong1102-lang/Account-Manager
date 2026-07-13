@@ -16,12 +16,25 @@ const newItem = () => ({
   kind: 'product', ref_id: '', name: '', invoice_name: '', model: '',
   qty: 1, unit: 'cái', price: 0, vat: 8,
   image_url: '', description: '', product_url: '',
+  // Chỉ dùng khi kind === 'set':
+  gallery: [],            // ảnh minh họa set
+  set_lines: [],          // [{qty, name}] để mô tả thành phần
+  set_components: [],     // [{name, invoice_name, description, image_url}] chi tiết SP thành phần
 })
+
+// Ghi chú mặc định (gộp phần "Lưu ý" cũ) — user có thể sửa trong giao diện
+const DEFAULT_NOTES = [
+  '- Đơn giá đã bao gồm thuế VAT',
+  '- Chính sách bảo hành chính hãng 12 tháng.',
+  '- Đối với đơn hàng số lượng lớn hơn, vui lòng liên hệ chúng tôi để có giá tốt hơn.',
+  '- Báo giá có giá trị trong vòng 15 ngày.',
+  '- Liên hệ: Mr. Trường - Sales Manager: 0906 079 936',
+].join('\n')
 
 const EMPTY = {
   quote_number: '', company_name: '', address: '', tax_code: '',
   contact_person: '', contact_email: '', valid_until: '',
-  notes: '',
+  notes: DEFAULT_NOTES,
   items: [newItem()],
 }
 
@@ -43,7 +56,7 @@ export default function Quotes() {
     const [{ data: q }, { data: p }, { data: s }, { data: c }] = await Promise.all([
       supabase.from('crm_quotes').select('*').order('created_at', { ascending: false }),
       supabase.from('crm_products').select('id, name, short_name, invoice_name, sku, base_price, unit, description, image_url, product_url'),
-      supabase.from('crm_gift_sets').select('id, name, short_name, invoice_name, sku, price, unit, description, image_url, items'),
+      supabase.from('crm_gift_sets').select('id, name, short_name, invoice_name, sku, price, unit, description, image_url, gallery, items'),
       supabase.from('crm_customers').select('company_name, address, tax_code, contact_person, contact_email'),
     ])
     setRows(q || []); setProducts(p || []); setSets(s || []); setCustomers(c || []); setLoading(false)
@@ -102,6 +115,9 @@ export default function Quotes() {
       name: it.name, invoice_name: it.invoice_name || '', model: it.model || '',
       qty: Number(it.qty) || 0, unit: it.unit, price: Number(it.price) || 0, vat: Number(it.vat) || 0,
       image_url: it.image_url || '', description: it.description || '', product_url: it.product_url || '',
+      gallery: it.kind === 'set' ? (it.gallery || []) : [],
+      set_lines: it.kind === 'set' ? (it.set_lines || []) : [],
+      set_components: it.kind === 'set' ? (it.set_components || []) : [],
     }))
     // Lưu vat_percent = vat của dòng đầu (tương thích cột cũ), thực tế mỗi dòng đã có vat riêng
     const payload = {
@@ -246,10 +262,10 @@ export default function Quotes() {
             </div>
           </div>
 
-          {/* Ghi chú (hiện dưới bảng trên báo giá) */}
+          {/* Lưu ý (gộp ghi chú + lưu ý, hiện dưới bảng trên báo giá) */}
           <div>
-            <label className="label-field">Ghi chú <span className="text-ink-faint">(hiện dưới bảng trên báo giá)</span></label>
-            <textarea className="input-field min-h-[60px]" value={form.notes} onChange={set('notes')} placeholder="Điều khoản thanh toán, thời gian giao hàng, in logo..." />
+            <label className="label-field">Lưu ý <span className="text-ink-faint">(hiện dưới bảng trên báo giá — có thể sửa)</span></label>
+            <textarea className="input-field min-h-[120px]" value={form.notes} onChange={set('notes')} placeholder="Điều khoản thanh toán, thời gian giao hàng, in logo..." />
           </div>
 
           {/* Tổng kết */}
@@ -294,14 +310,28 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
     setPickerOpen(false); setQ('')
   }
   const pickSet = (s) => {
-    // Ghép mô tả từ set + thành phần
-    const compDesc = (s.items || []).map((c) => `• ${c.qty}× ${c.name}`).join('\n')
-    const desc = [s.description, compDesc].filter(Boolean).join('\n')
+    // Dòng mô tả thành phần (hiện dưới tên set ở trang thông tin)
+    const setLines = (s.items || []).map((c) => ({ qty: Number(c.qty) || 1, name: c.name }))
+    const compDesc = setLines.map((c) => `• ${c.qty}× ${c.name}`).join('\n')
+    // Chi tiết đầy đủ từng sản phẩm thành phần (lấy từ bảng products theo product_id)
+    const components = (s.items || []).map((c) => {
+      const p = products.find((pr) => pr.id === c.product_id)
+      return {
+        qty: Number(c.qty) || 1,
+        name: p?.name || c.name || '',
+        invoice_name: p?.invoice_name || p?.name || c.name || '',
+        description: p?.description || '',
+        image_url: p?.image_url || c.image_url || '',
+      }
+    })
     onChange({
       kind: 'set', ref_id: s.id,
       name: s.short_name || s.name, invoice_name: s.invoice_name || s.name, model: s.sku || '',
       unit: s.unit || 'set', price: Number(s.price) || 0,
-      image_url: s.image_url || '', description: desc, product_url: '',
+      image_url: s.image_url || '', description: compDesc, product_url: '',
+      gallery: s.gallery || [],
+      set_lines: setLines,
+      set_components: components,
     })
     setPickerOpen(false); setQ('')
   }
