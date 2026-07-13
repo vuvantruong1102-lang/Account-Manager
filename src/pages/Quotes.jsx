@@ -14,17 +14,17 @@ import { exportQuotePDF } from '../lib/quotePdf'
 // vat        = % VAT của dòng
 const newItem = () => ({
   kind: 'product', ref_id: '', name: '', invoice_name: '', model: '',
-  qty: 1, unit: 'cái', price: 0, vat: 8,
+  qty: 1, unit: 'cái', price: 0, note: '',
   image_url: '', description: '', product_url: '',
   // Chỉ dùng khi kind === 'set':
   gallery: [],            // ảnh minh họa set
   set_lines: [],          // [{qty, name}] để mô tả thành phần
-  set_components: [],     // [{name, invoice_name, description, image_url}] chi tiết SP thành phần
+  set_components: [],     // [{name, short_name, invoice_name, description, image_url}] chi tiết SP thành phần
 })
 
-// Ghi chú mặc định (gộp phần "Lưu ý" cũ) — user có thể sửa trong giao diện
+// Lưu ý mặc định — user có thể sửa trong giao diện
 const DEFAULT_NOTES = [
-  '- Đơn giá đã bao gồm thuế VAT',
+  '- Đơn giá chưa bao gồm thuế VAT (VAT được tính riêng).',
   '- Chính sách bảo hành chính hãng 12 tháng.',
   '- Đối với đơn hàng số lượng lớn hơn, vui lòng liên hệ chúng tôi để có giá tốt hơn.',
   '- Báo giá có giá trị trong vòng 15 ngày.',
@@ -34,6 +34,7 @@ const DEFAULT_NOTES = [
 const EMPTY = {
   quote_number: '', company_name: '', address: '', tax_code: '',
   contact_person: '', contact_email: '', valid_until: '',
+  vat_percent: 8,
   notes: DEFAULT_NOTES,
   items: [newItem()],
 }
@@ -97,15 +98,12 @@ export default function Quotes() {
     setForm({ ...EMPTY, ...r, items }); setEditId(r.id); setOpen(true)
   }
 
-  // Tổng: đơn giá CHƯA VAT → cộng VAT từng dòng
+  // Thành tiền mỗi dòng CHƯA VAT; VAT tính chung theo vat_percent của báo giá
   const calc = (f) => {
-    let sub = 0, vat = 0
-    ;(f.items || []).forEach((it) => {
-      const line = (Number(it.qty) || 0) * (Number(it.price) || 0)
-      sub += line
-      vat += line * (Number(it.vat) || 0) / 100
-    })
-    return { sub, vat, total: sub + vat }
+    const sub = (f.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0)
+    const rate = Number(f.vat_percent) || 0
+    const vat = sub * rate / 100
+    return { sub, vat, total: sub + vat, rate }
   }
 
   const save = async () => {
@@ -113,18 +111,17 @@ export default function Quotes() {
     const cleanItems = form.items.filter((it) => it.name).map((it) => ({
       kind: it.kind || 'product', ref_id: it.ref_id || '',
       name: it.name, invoice_name: it.invoice_name || '', model: it.model || '',
-      qty: Number(it.qty) || 0, unit: it.unit, price: Number(it.price) || 0, vat: Number(it.vat) || 0,
+      qty: Number(it.qty) || 0, unit: it.unit, price: Number(it.price) || 0, note: it.note || '',
       image_url: it.image_url || '', description: it.description || '', product_url: it.product_url || '',
       gallery: it.kind === 'set' ? (it.gallery || []) : [],
       set_lines: it.kind === 'set' ? (it.set_lines || []) : [],
       set_components: it.kind === 'set' ? (it.set_components || []) : [],
     }))
-    // Lưu vat_percent = vat của dòng đầu (tương thích cột cũ), thực tế mỗi dòng đã có vat riêng
     const payload = {
       user_id: user.id, quote_number: form.quote_number, company_name: form.company_name,
       address: form.address, tax_code: form.tax_code, contact_person: form.contact_person,
       contact_email: form.contact_email, items: cleanItems,
-      vat_percent: cleanItems[0]?.vat || 0, discount: 0,
+      vat_percent: Number(form.vat_percent) || 0, discount: 0,
       notes: form.notes, valid_until: form.valid_until || null,
     }
     let saved
@@ -159,10 +156,8 @@ export default function Quotes() {
   const updateItem = (i, patch) => { const items = [...form.items]; items[i] = { ...items[i], ...patch }; setForm({ ...form, items }) }
   const removeItem = (i) => setForm({ ...form, items: form.items.filter((_, j) => j !== i) })
 
-  const lineTotal = (it) => {
-    const base = (Number(it.qty) || 0) * (Number(it.price) || 0)
-    return base + base * (Number(it.vat) || 0) / 100
-  }
+  // Thành tiền hiển thị trong bảng = CHƯA VAT
+  const lineTotal = (it) => (Number(it.qty) || 0) * (Number(it.price) || 0)
   const totals = calc(form)
 
   return (
@@ -268,15 +263,23 @@ export default function Quotes() {
             <textarea className="input-field min-h-[120px]" value={form.notes} onChange={set('notes')} placeholder="Điều khoản thanh toán, thời gian giao hàng, in logo..." />
           </div>
 
+          {/* Thuế suất VAT chung */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-field">Thuế suất VAT (%)</label>
+              <input className="input-field" type="number" value={form.vat_percent} onChange={set('vat_percent')} />
+            </div>
+          </div>
+
           {/* Tổng kết */}
           <div className="rounded-lg bg-paper p-4">
-            <div className="flex justify-between text-sm text-ink-soft"><span>Tạm tính (chưa VAT)</span><span>{formatVND(totals.sub)}</span></div>
-            <div className="flex justify-between text-sm text-ink-soft"><span>Tiền VAT</span><span>{formatVND(totals.vat)}</span></div>
+            <div className="flex justify-between text-sm text-ink-soft"><span>Thành tiền (Chưa VAT)</span><span>{formatVND(totals.sub)}</span></div>
+            <div className="flex justify-between text-sm text-ink-soft"><span>Tiền VAT ({totals.rate}%)</span><span>{formatVND(totals.vat)}</span></div>
             <div className="mt-2 flex justify-between border-t border-paper-line pt-2 text-base font-700 text-ink"><span>Tổng cộng</span><span className="text-brand">{formatVND(totals.total)}</span></div>
           </div>
 
           <p className="rounded-lg bg-blue-50 px-4 py-2 text-xs text-blue-700">
-            <b>Phần 2 — Thông tin sản phẩm</b> sẽ tự động là trang tiếp theo của PDF: hiển thị Tên sản phẩm, Tên trên hóa đơn, Thông số kỹ thuật và Hình ảnh minh họa của từng mặt hàng/set quà.
+            <b>Phần 2 — Thông tin sản phẩm</b> là các trang tiếp theo của PDF: mỗi set quà 1 trang riêng (thành phần + ảnh minh họa), rồi các sản phẩm chi tiết trình bày dạng bảng (Tên, Ảnh, Tên hóa đơn, Thông số) — khoảng 3 sản phẩm/trang.
           </p>
         </div>
         <div className="mt-6 flex justify-end gap-2">
@@ -318,7 +321,7 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
       const p = products.find((pr) => pr.id === c.product_id)
       return {
         qty: Number(c.qty) || 1,
-        name: p?.name || c.name || '',
+        name: p?.short_name || p?.name || c.name || '',   // tên rút gọn (không lặp tên hóa đơn)
         invoice_name: p?.invoice_name || p?.name || c.name || '',
         description: p?.description || '',
         image_url: p?.image_url || c.image_url || '',
@@ -404,8 +407,8 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
             </div>
           </div>
 
-          {/* SL / ĐV / Đơn giá / VAT / Thành tiền */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {/* SL / ĐV / Đơn giá / Thành tiền */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div>
               <label className="text-[11px] font-medium text-ink-faint">Số lượng</label>
               <input className="input-field py-1.5 text-center text-sm" type="number" value={item.qty} onChange={set('qty')} />
@@ -419,13 +422,15 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
               <input className="input-field py-1.5 text-right text-sm" type="number" value={item.price} onChange={set('price')} />
             </div>
             <div>
-              <label className="text-[11px] font-medium text-ink-faint">VAT %</label>
-              <input className="input-field py-1.5 text-center text-sm" type="number" value={item.vat} onChange={set('vat')} />
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-ink-faint">Thành tiền</label>
+              <label className="text-[11px] font-medium text-ink-faint">Thành tiền (chưa VAT)</label>
               <div className="rounded-lg bg-paper px-2 py-1.5 text-right text-sm font-semibold text-ink">{formatVND(lineTotal)}</div>
             </div>
+          </div>
+
+          {/* Ghi chú của dòng (hiện ở cột Ghi chú trên bảng báo giá) */}
+          <div>
+            <label className="text-[11px] font-medium text-ink-faint">Ghi chú <span className="text-ink-faint">(hiện ở cột Ghi chú trong bảng báo giá)</span></label>
+            <input className="input-field py-1.5 text-sm" value={item.note} onChange={set('note')} placeholder="VD: In logo, màu theo yêu cầu..." />
           </div>
 
           {/* Thông số kỹ thuật (hiện ở phần 2) */}
