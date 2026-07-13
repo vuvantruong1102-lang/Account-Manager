@@ -249,7 +249,7 @@ export function exportQuotePDF(quote) {
       const gap = 8
       const fullW = W - 2 * M
 
-      // Vẽ 1 ảnh vừa khít trong ô (bx, by, bw, bh), giữ tỷ lệ, căn giữa ô
+      // Vẽ 1 ảnh vừa khít trong ô, giữ tỷ lệ, căn giữa ô. Trả về kích thước ảnh thực vẽ.
       const drawFit = (g, bx, by, bw, bh) => {
         try {
           const props = doc.getImageProperties(g)
@@ -257,7 +257,8 @@ export function exportQuotePDF(quote) {
           let w = bw, h = bw / ratio
           if (h > bh) { h = bh; w = bh * ratio }
           doc.addImage(g, imgFmt(g), bx + (bw - w) / 2, by + (bh - h) / 2, w, h)
-        } catch (e) {}
+          return { w, h }
+        } catch (e) { return { w: 0, h: 0 } }
       }
 
       if (gallery.length === 1) {
@@ -266,22 +267,28 @@ export function exportQuotePDF(quote) {
       } else if (gallery.length === 2) {
         // 2 ảnh: xếp ngang
         const bw = (fullW - gap) / 2
-        const bh = Math.min(availH, 150)
+        const bh = Math.min(availH, 160)
         drawFit(gallery[0], M, py, bw, bh)
         drawFit(gallery[1], M + bw + gap, py, bw, bh)
       } else {
-        // 3 ảnh: 1 trên (giữa) + 2 dưới → cân đối
-        const rowGap = 8
-        const topH = (availH - rowGap) * 0.48
-        const botH = (availH - rowGap) * 0.48
-        const topW = fullW * 0.6
-        // Hàng trên: 1 ảnh căn giữa
-        drawFit(gallery[0], M + (fullW - topW) / 2, py, topW, topH)
-        // Hàng dưới: 2 ảnh cạnh nhau
-        const by = py + topH + rowGap
-        const bw = (fullW - gap) / 2
-        drawFit(gallery[1], M, by, bw, botH)
-        drawFit(gallery[2], M + bw + gap, by, bw, botH)
+        // 3 ảnh: ảnh chính TO ở trên; 2 ảnh dưới = 60% kích thước ảnh chính
+        const rowGap = 10
+        // Ảnh chính chiếm ~62% chiều cao còn lại, rộng gần hết trang
+        const topBoxH = (availH - rowGap) * 0.62
+        const topBoxW = fullW
+        const main = drawFit(gallery[0], M, py, topBoxW, topBoxH)
+
+        // 2 ảnh dưới: mỗi ô = 60% kích thước ảnh chính thực vẽ (không vượt quá nửa trang)
+        let subW = main.w * 0.6
+        let subH = main.h * 0.6
+        const maxSubW = (fullW - gap) / 2
+        if (subW > maxSubW) { const k = maxSubW / subW; subW = maxSubW; subH = subH * k }
+        const by = py + topBoxH + rowGap
+        // Căn giữa cụm 2 ảnh theo chiều ngang
+        const totalW = subW * 2 + gap
+        let bx = M + (fullW - totalW) / 2
+        drawFit(gallery[1], bx, by, subW, subH)
+        drawFit(gallery[2], bx + subW + gap, by, subW, subH)
       }
     }
   })
