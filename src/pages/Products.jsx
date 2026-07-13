@@ -36,7 +36,7 @@ async function compressImage(file, max = 400, quality = 0.75) {
 }
 
 // Ảnh set quà (đại diện + minh họa) cần in TO & NÉT → độ phân giải cao hơn
-const compressSetImage = (file) => compressImage(file, 1400, 0.85)
+const compressSetImage = (file) => compressImage(file, 1200, 0.85)
 
 export default function Products() {
   const { user } = useAuth()
@@ -296,7 +296,7 @@ function SetsTab({ sets, products, loading, reload, user }) {
         qty: Number(it.qty) || 1, price: Number(it.price) || 0, image_url: it.image_url || '',
       })),
       description: form.description, image_url: form.image_url,
-      gallery: (form.gallery || []).filter(Boolean).slice(0, 2),
+      gallery: (form.gallery || []).filter(Boolean).slice(0, 3),
     }
     const { error } = editId
       ? await supabase.from('crm_gift_sets').update(payload).eq('id', editId)
@@ -326,7 +326,7 @@ function SetsTab({ sets, products, loading, reload, user }) {
     setUploading(true)
     try {
       const img = await compressSetImage(file)
-      setForm((f) => ({ ...f, gallery: [...(f.gallery || []), img].slice(0, 2) }))
+      setForm((f) => ({ ...f, gallery: [...(f.gallery || []), img].slice(0, 3) }))
     } catch (err) { alert('Không đọc được ảnh: ' + err.message) }
     finally { setUploading(false); e.target.value = '' }
   }
@@ -502,11 +502,11 @@ function SetsTab({ sets, products, loading, reload, user }) {
             )}
           </div>
 
-          {/* Ảnh minh họa thêm cho set (tối đa 2, hiện ở trang Thông tin sản phẩm) */}
+          {/* Ảnh minh họa thêm cho set (tối đa 3, hiện ở trang Thông tin sản phẩm) */}
           <div className="md:col-span-3">
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="label-field mb-0">Ảnh minh họa set <span className="text-ink-faint">(tối đa 2 — hiện ở trang Thông tin sản phẩm)</span></label>
-              <span className="text-xs text-ink-faint">{(form.gallery || []).length}/2</span>
+              <label className="label-field mb-0">Ảnh minh họa set <span className="text-ink-faint">(tối đa 3 — hiện ở trang Thông tin sản phẩm)</span></label>
+              <span className="text-xs text-ink-faint">{(form.gallery || []).length}/3</span>
             </div>
             <div className="flex flex-wrap gap-3">
               {(form.gallery || []).map((g, i) => (
@@ -515,7 +515,7 @@ function SetsTab({ sets, products, loading, reload, user }) {
                   <button onClick={() => removeGallery(i)} className="absolute right-1 top-1 rounded-full bg-white/90 p-0.5 text-ink-faint hover:text-rose-600"><X size={13} /></button>
                 </div>
               ))}
-              {(form.gallery || []).length < 2 && (
+              {(form.gallery || []).length < 3 && (
                 <button onClick={() => galleryRef.current?.click()} disabled={uploading}
                   className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-paper-line text-ink-faint hover:text-brand">
                   <Upload size={18} />

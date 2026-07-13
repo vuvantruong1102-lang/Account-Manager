@@ -19,22 +19,23 @@ const newItem = () => ({
   // Chỉ dùng khi kind === 'set':
   gallery: [],            // ảnh minh họa set
   set_lines: [],          // [{qty, name}] để mô tả thành phần
+  set_desc: '',           // thông số / mô tả set (hiện ở trang thông tin set)
   set_components: [],     // [{name, short_name, invoice_name, description, image_url}] chi tiết SP thành phần
 })
 
 // Lưu ý mặc định — user có thể sửa trong giao diện
 const DEFAULT_NOTES = [
-  '- Đơn giá chưa bao gồm thuế VAT (VAT được tính riêng).',
+  '- Đơn giá đã bao gồm thuế VAT, phí vận chuyển, chi phí in logo theo yêu cầu của quý khách',
   '- Chính sách bảo hành chính hãng 12 tháng.',
   '- Đối với đơn hàng số lượng lớn hơn, vui lòng liên hệ chúng tôi để có giá tốt hơn.',
   '- Báo giá có giá trị trong vòng 15 ngày.',
-  '- Liên hệ: Mr. Trường - Sales Manager: 0906 079 936',
+  '- Liên hệ: Ms Nhật Lệ - Corporate Sales Manager: 0974 626 720',
 ].join('\n')
 
 const EMPTY = {
   quote_number: '', company_name: '', address: '', tax_code: '',
   contact_person: '', contact_email: '', valid_until: '',
-  vat_percent: 8,
+  vat_percent: 8, is_comparison: false,
   notes: DEFAULT_NOTES,
   items: [newItem()],
 }
@@ -106,8 +107,9 @@ export default function Quotes() {
     return { sub, vat, total: sub + vat, rate }
   }
 
-  const save = async () => {
+  const save = async (comparisonOverride) => {
     if (!form.company_name.trim()) { alert('Nhập tên công ty'); return }
+    const isComparison = comparisonOverride !== undefined ? comparisonOverride : !!form.is_comparison
     const cleanItems = form.items.filter((it) => it.name).map((it) => ({
       kind: it.kind || 'product', ref_id: it.ref_id || '',
       name: it.name, invoice_name: it.invoice_name || '', model: it.model || '',
@@ -115,6 +117,7 @@ export default function Quotes() {
       image_url: it.image_url || '', description: it.description || '', product_url: it.product_url || '',
       gallery: it.kind === 'set' ? (it.gallery || []) : [],
       set_lines: it.kind === 'set' ? (it.set_lines || []) : [],
+      set_desc: it.kind === 'set' ? (it.set_desc || '') : '',
       set_components: it.kind === 'set' ? (it.set_components || []) : [],
     }))
     const payload = {
@@ -122,6 +125,7 @@ export default function Quotes() {
       address: form.address, tax_code: form.tax_code, contact_person: form.contact_person,
       contact_email: form.contact_email, items: cleanItems,
       vat_percent: Number(form.vat_percent) || 0, discount: 0,
+      is_comparison: isComparison,
       notes: form.notes, valid_until: form.valid_until || null,
     }
     let saved
@@ -279,12 +283,19 @@ export default function Quotes() {
           </div>
 
           <p className="rounded-lg bg-blue-50 px-4 py-2 text-xs text-blue-700">
-            <b>Phần 2 — Thông tin sản phẩm</b> là các trang tiếp theo của PDF: mỗi set quà 1 trang riêng (thành phần + ảnh minh họa), rồi các sản phẩm chi tiết trình bày dạng bảng (Tên, Ảnh, Tên hóa đơn, Thông số) — khoảng 3 sản phẩm/trang.
+            <b>Phần 2 — Thông tin sản phẩm</b> là các trang tiếp theo của PDF: mỗi set quà 1 trang riêng (thành phần + mô tả + ảnh minh họa), rồi các sản phẩm chi tiết trình bày dạng bảng (Tên, Ảnh, Thông số) — khoảng 3 sản phẩm/trang.
           </p>
         </div>
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
           <button className="btn-ghost" onClick={() => setOpen(false)}>Hủy</button>
-          <button className="btn-primary" onClick={save}>{editId ? 'Lưu & Xuất PDF' : 'Tạo & Xuất PDF'}</button>
+          <button
+            className="rounded-lg border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand-50"
+            onClick={() => save(true)}
+            title="Xuất báo giá dạng so sánh: giá & thành tiền đã gồm VAT, ẩn phần tổng cộng"
+          >
+            Báo giá so sánh
+          </button>
+          <button className="btn-primary" onClick={() => save(false)}>{editId ? 'Lưu & Xuất PDF' : 'Tạo & Xuất PDF'}</button>
         </div>
       </Modal>
     </div>
@@ -334,6 +345,7 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
       image_url: s.image_url || '', description: compDesc, product_url: '',
       gallery: s.gallery || [],
       set_lines: setLines,
+      set_desc: s.description || '',   // Thông số / mô tả set → hiện ở trang thông tin set
       set_components: components,
     })
     setPickerOpen(false); setQ('')
