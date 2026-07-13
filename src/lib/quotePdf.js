@@ -108,20 +108,20 @@ export function exportQuotePDF(quote) {
   doc.splitTextToSize(INTRO, W - 2 * M).forEach((ln) => { doc.text(ln, M, cy); cy += 5 })
   y = cy + 4
 
-  // Bảng: STT | Ảnh | Tên | SL | Đơn giá | Thành tiền (chưa VAT) | Ghi chú
+  // Bảng: STT | Ảnh | Tên | SL | Đơn giá | Thành tiền (chưa VAT)
   const items = quote.items || []
   const body = items.map((it, i) => {
     const base = (Number(it.qty) || 0) * (Number(it.price) || 0)
     return [
       String(i + 1), '', it.name || '',
       `${fmt(it.qty)} ${it.unit || ''}`.trim(),
-      `${fmt(it.price)} đ`, `${fmt(base)} đ`, it.note || '',
+      `${fmt(it.price)} đ`, `${fmt(base)} đ`,
     ]
   })
 
   autoTable(doc, {
     startY: y,
-    head: [['STT', 'Ảnh', 'Tên sản phẩm / Set quà', 'SL', 'Đơn giá', 'Thành tiền', 'Ghi chú']],
+    head: [['STT', 'Ảnh', 'Tên sản phẩm / Set quà', 'SL', 'Đơn giá', 'Thành tiền']],
     body,
     margin: { left: M, right: M },
     theme: 'grid',
@@ -129,13 +129,12 @@ export function exportQuotePDF(quote) {
     styles: { font: 'Roboto', fontSize: 9, cellPadding: 2.5, textColor: INK, lineColor: [225, 225, 223], lineWidth: 0.1, valign: 'middle' },
     headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: INK, textColor: [255, 255, 255], fontSize: 9, halign: 'center' },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 11 },
-      1: { halign: 'center', cellWidth: 20, minCellHeight: 20 },
+      0: { halign: 'center', cellWidth: 12 },
+      1: { halign: 'center', cellWidth: 24, minCellHeight: 22 },
       2: { halign: 'left' },
-      3: { halign: 'center', cellWidth: 16 },
-      4: { halign: 'right', cellWidth: 25 },
-      5: { halign: 'right', cellWidth: 28 },
-      6: { halign: 'left', cellWidth: 34, fontSize: 8 },
+      3: { halign: 'center', cellWidth: 20 },
+      4: { halign: 'right', cellWidth: 32 },
+      5: { halign: 'right', cellWidth: 34 },
     },
     alternateRowStyles: { fillColor: [250, 250, 249] },
     didDrawCell: (data) => {
@@ -248,33 +247,41 @@ export function exportQuotePDF(quote) {
     if (gallery.length) {
       const availH = (H - 15) - py
       const gap = 8
-      if (gallery.length === 1) {
-        // 1 ảnh: căn giữa, to hết cỡ
-        const g = gallery[0]
+      const fullW = W - 2 * M
+
+      // Vẽ 1 ảnh vừa khít trong ô (bx, by, bw, bh), giữ tỷ lệ, căn giữa ô
+      const drawFit = (g, bx, by, bw, bh) => {
         try {
           const props = doc.getImageProperties(g)
           const ratio = props.width / props.height
-          const boxW = W - 2 * M, boxH = availH
-          let w = boxW, h = boxW / ratio
-          if (h > boxH) { h = boxH; w = boxH * ratio }
-          doc.addImage(g, imgFmt(g), M + (boxW - w) / 2, py + (boxH - h) / 2, w, h)
+          let w = bw, h = bw / ratio
+          if (h > bh) { h = bh; w = bh * ratio }
+          doc.addImage(g, imgFmt(g), bx + (bw - w) / 2, by + (bh - h) / 2, w, h)
         } catch (e) {}
+      }
+
+      if (gallery.length === 1) {
+        // 1 ảnh: to hết cỡ, căn giữa trang
+        drawFit(gallery[0], M, py, fullW, availH)
+      } else if (gallery.length === 2) {
+        // 2 ảnh: xếp ngang
+        const bw = (fullW - gap) / 2
+        const bh = Math.min(availH, 150)
+        drawFit(gallery[0], M, py, bw, bh)
+        drawFit(gallery[1], M + bw + gap, py, bw, bh)
       } else {
-        // 2–3 ảnh: xếp ngang, mỗi ảnh chiếm ô rộng, cao gần hết trang
-        const n = Math.min(gallery.length, 3)
-        const boxW = (W - 2 * M - gap * (n - 1)) / n
-        const boxH = Math.min(availH, 150)
-        let gx = M
-        gallery.slice(0, 3).forEach((g) => {
-          try {
-            const props = doc.getImageProperties(g)
-            const ratio = props.width / props.height
-            let w = boxW, h = boxW / ratio
-            if (h > boxH) { h = boxH; w = boxH * ratio }
-            doc.addImage(g, imgFmt(g), gx + (boxW - w) / 2, py + (boxH - h) / 2, w, h)
-          } catch (e) {}
-          gx += boxW + gap
-        })
+        // 3 ảnh: 1 trên (giữa) + 2 dưới → cân đối
+        const rowGap = 8
+        const topH = (availH - rowGap) * 0.48
+        const botH = (availH - rowGap) * 0.48
+        const topW = fullW * 0.6
+        // Hàng trên: 1 ảnh căn giữa
+        drawFit(gallery[0], M + (fullW - topW) / 2, py, topW, topH)
+        // Hàng dưới: 2 ảnh cạnh nhau
+        const by = py + topH + rowGap
+        const bw = (fullW - gap) / 2
+        drawFit(gallery[1], M, by, bw, botH)
+        drawFit(gallery[2], M + bw + gap, by, bw, botH)
       }
     }
   })
@@ -313,12 +320,12 @@ export function exportQuotePDF(quote) {
       margin: { left: M, right: M, top: 30 },
       theme: 'grid',
       tableLineColor: [210, 210, 208], tableLineWidth: 0.1,
-      styles: { font: 'Roboto', fontSize: 8.5, cellPadding: 3, textColor: INK, lineColor: [225, 225, 223], lineWidth: 0.1, valign: 'top', minCellHeight: ROW_H },
+      styles: { font: 'Roboto', fontSize: 8.5, cellPadding: 3, textColor: INK, lineColor: [225, 225, 223], lineWidth: 0.1, valign: 'middle', minCellHeight: ROW_H },
       headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: INK, textColor: [255, 255, 255], fontSize: 9, halign: 'center', valign: 'middle' },
       columnStyles: {
-        0: { cellWidth: 38, fontStyle: 'bold', valign: 'middle' },
-        1: { cellWidth: 40, halign: 'center', valign: 'middle' },
-        2: { cellWidth: 42, valign: 'middle' },
+        0: { cellWidth: 38, fontStyle: 'bold' },
+        1: { cellWidth: 40, halign: 'center' },
+        2: { cellWidth: 42 },
         3: { cellWidth: 'auto', fontSize: 8 },
       },
       didDrawCell: (data) => {
