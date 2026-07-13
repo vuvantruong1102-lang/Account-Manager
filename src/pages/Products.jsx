@@ -16,8 +16,8 @@ const EMPTY_SET = {
   price: '', auto_price: true, items: [], description: '', image_url: '', gallery: [],
 }
 
-// Nén ảnh client-side: resize max 400px, JPEG quality 75 → ra base64
-async function compressImage(file) {
+// Nén ảnh client-side: resize + JPEG → base64. max/quality tùy chỉnh.
+async function compressImage(file, max = 400, quality = 0.75) {
   const dataUrl = await new Promise((res, rej) => {
     const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej
     r.readAsDataURL(file)
@@ -25,7 +25,6 @@ async function compressImage(file) {
   const img = await new Promise((res, rej) => {
     const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl
   })
-  const max = 400
   let w = img.width, h = img.height
   if (w > max) { h = Math.round(h * (max / w)); w = max }
   const canvas = document.createElement('canvas')
@@ -33,8 +32,11 @@ async function compressImage(file) {
   const ctx = canvas.getContext('2d')
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h)
   ctx.drawImage(img, 0, 0, w, h)
-  return canvas.toDataURL('image/jpeg', 0.75)
+  return canvas.toDataURL('image/jpeg', quality)
 }
+
+// Ảnh set quà (đại diện + minh họa) cần in TO & NÉT → độ phân giải cao hơn
+const compressSetImage = (file) => compressImage(file, 1400, 0.85)
 
 export default function Products() {
   const { user } = useAuth()
@@ -314,7 +316,7 @@ function SetsTab({ sets, products, loading, reload, user }) {
   const onPickImage = async (e) => {
     const file = e.target.files?.[0]; if (!file) return
     setUploading(true)
-    try { const img = await compressImage(file); setForm((f) => ({ ...f, image_url: img })) }
+    try { const img = await compressSetImage(file); setForm((f) => ({ ...f, image_url: img })) }
     catch (err) { alert('Không đọc được ảnh: ' + err.message) }
     finally { setUploading(false); e.target.value = '' }
   }
@@ -323,7 +325,7 @@ function SetsTab({ sets, products, loading, reload, user }) {
     const file = e.target.files?.[0]; if (!file) return
     setUploading(true)
     try {
-      const img = await compressImage(file)
+      const img = await compressSetImage(file)
       setForm((f) => ({ ...f, gallery: [...(f.gallery || []), img].slice(0, 2) }))
     } catch (err) { alert('Không đọc được ảnh: ' + err.message) }
     finally { setUploading(false); e.target.value = '' }
