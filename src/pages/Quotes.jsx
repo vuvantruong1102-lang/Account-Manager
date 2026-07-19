@@ -32,10 +32,14 @@ const DEFAULT_NOTES = [
   '- Liên hệ: Ms Nhật Lệ - Corporate Sales Manager: 0974 626 720',
 ].join('\n')
 
+// Lời mở đầu mặc định — user có thể sửa trong giao diện
+const DEFAULT_INTRO = 'Cảm ơn Quý Công ty đã quan tâm và dành thời gian trao đổi với chúng tôi về các sản phẩm của Yokool. Chúng tôi xin được giới thiệu chi tiết sản phẩm kèm báo giá. Rất mong có cơ hội được hợp tác với Quý Công ty!'
+
 const EMPTY = {
   quote_number: '', company_name: '', address: '', tax_code: '',
   contact_person: '', contact_email: '', valid_until: '',
   vat_percent: 8, is_comparison: false,
+  intro: DEFAULT_INTRO,
   notes: DEFAULT_NOTES,
   items: [newItem()],
 }
@@ -98,7 +102,7 @@ export default function Quotes() {
   }
   const openEdit = (r) => {
     const items = (r.items?.length ? r.items : [newItem()]).map((it) => ({ ...newItem(), ...it }))
-    setForm({ ...EMPTY, ...r, items }); setEditId(r.id); setOpen(true)
+    setForm({ ...EMPTY, ...r, intro: r.intro || DEFAULT_INTRO, notes: r.notes || DEFAULT_NOTES, items }); setEditId(r.id); setOpen(true)
   }
 
   // Thành tiền mỗi dòng CHƯA VAT; VAT tính chung theo vat_percent của báo giá
@@ -128,7 +132,7 @@ export default function Quotes() {
       contact_email: form.contact_email, items: cleanItems,
       vat_percent: Number(form.vat_percent) || 0, discount: 0,
       is_comparison: isComparison,
-      notes: form.notes, valid_until: form.valid_until || null,
+      intro: form.intro, notes: form.notes, valid_until: form.valid_until || null,
     }
     let saved
     const runSave = async (pl) => {
@@ -140,11 +144,18 @@ export default function Quotes() {
       return { data, error }
     }
     let res = await runSave(payload)
-    // Nếu cột is_comparison chưa có trong DB thì lưu lại không kèm cột đó
-    if (res.error && /is_comparison/.test(res.error.message || '')) {
-      const { is_comparison, ...fallback } = payload
-      res = await runSave(fallback)
-      if (!res.error) alert('Đã lưu, nhưng chưa chạy migration cột is_comparison — báo giá so sánh sẽ chưa lưu được chế độ. Hãy chạy supabase_migration_giftsets.sql.')
+    // Nếu DB thiếu cột nào đó (chưa chạy migration), tự bỏ cột thiếu rồi lưu lại
+    let tries = 0
+    while (res.error && tries < 4) {
+      const msg = res.error.message || ''
+      // Postgres báo: column "xxx" ... does not exist / Could not find the 'xxx' column
+      const m = msg.match(/column "?([a-z_]+)"?/i) || msg.match(/'([a-z_]+)' column/i)
+      const col = m && m[1]
+      if (!col || !(col in payload)) break
+      delete payload[col]
+      tries++
+      res = await runSave(payload)
+      if (!res.error) console.warn('Đã lưu nhưng bỏ qua cột thiếu:', col, '(hãy chạy migration để dùng đầy đủ)')
     }
     if (res.error) { alert('Lưu báo giá thất bại: ' + res.error.message); return }
     saved = res.data || payload
@@ -257,6 +268,12 @@ export default function Quotes() {
             <div className="sm:col-span-2"><label className="label-field">Email người nhận</label><input className="input-field" value={form.contact_email} onChange={set('contact_email')} /></div>
           </div>
 
+          {/* Lời mở đầu (hiện trên báo giá, dưới phần Kính gửi) */}
+          <div>
+            <label className="label-field">Lời mở đầu <span className="text-ink-faint">(hiện trên báo giá — có thể sửa)</span></label>
+            <textarea className="input-field min-h-[70px]" value={form.intro} onChange={set('intro')} placeholder="Lời chào/giới thiệu gửi khách hàng..." />
+          </div>
+
           {/* ===== PHẦN 1: BẢNG BÁO GIÁ ===== */}
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -363,8 +380,8 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
     setPickerOpen(false); setQ('')
   }
 
-  const prodMatches = products.filter((p) => (p.name + ' ' + (p.short_name || '') + ' ' + (p.sku || '')).toLowerCase().includes(q.toLowerCase())).slice(0, 5)
-  const setMatches = sets.filter((s) => (s.name + ' ' + (s.short_name || '') + ' ' + (s.sku || '')).toLowerCase().includes(q.toLowerCase())).slice(0, 5)
+  const prodMatches = products.filter((p) => (p.name + ' ' + (p.short_name || '') + ' ' + (p.sku || '')).toLowerCase().includes(q.toLowerCase())).slice(0, 30)
+  const setMatches = sets.filter((s) => (s.name + ' ' + (s.short_name || '') + ' ' + (s.sku || '')).toLowerCase().includes(q.toLowerCase())).slice(0, 50)
 
   const set = (k) => (e) => onChange({ [k]: e.target.value })
 
@@ -393,11 +410,11 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
               </button>
               <button onClick={onRemove} className="rounded-lg p-1.5 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><X size={15} /></button>
               {pickerOpen && (
-                <div className="absolute right-0 top-8 z-30 w-72 overflow-hidden rounded-lg border border-paper-line bg-white shadow-float">
+                <div className="absolute right-0 top-8 z-30 w-80 overflow-hidden rounded-lg border border-paper-line bg-white shadow-float">
                   <div className="border-b border-paper-line p-2">
                     <input autoFocus className="input-field py-1.5 text-sm" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm sản phẩm hoặc set..." />
                   </div>
-                  <div className="max-h-64 overflow-y-auto">
+                  <div className="max-h-96 overflow-y-auto">
                     {setMatches.length > 0 && <p className="px-3 pt-2 text-[10px] font-semibold uppercase text-ink-faint">Set quà</p>}
                     {setMatches.map((s) => (
                       <button key={'s' + s.id} onClick={() => pickSet(s)} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-paper">
