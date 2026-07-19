@@ -105,7 +105,10 @@ export function exportQuotePDF(quote) {
 
   cy += 2
   doc.setFont('Roboto', 'normal').setFontSize(9.5).setTextColor(...INK)
-  doc.splitTextToSize(INTRO, W - 2 * M).forEach((ln) => { doc.text(ln, M, cy); cy += 5 })
+  const introText = (quote.intro && quote.intro.trim()) ? quote.intro : INTRO
+  introText.split('\n').forEach((para) => {
+    doc.splitTextToSize(para, W - 2 * M).forEach((ln) => { doc.text(ln, M, cy); cy += 5 })
+  })
   y = cy + 4
 
   // Bảng: STT | Ảnh | Tên | SL | Đơn giá | Thành tiền
@@ -303,16 +306,16 @@ export function exportQuotePDF(quote) {
         let gx = M
         subImgs.slice(0, 3).forEach((g) => { drawFit(g, gx, py, bw, bh); gx += bw + gap })
       } else {
-        // Ảnh chính ở trên + ảnh minh họa TO ở dưới (mỗi ô chiếm cả hàng dưới)
+        // Ảnh chính TO ở trên; ảnh minh họa giữ kích thước ở hàng dưới
         const rowGap = 12
         const n = Math.min(subImgs.length, 3)
-        // Chia trang: ảnh chính ~54% chiều cao, ảnh minh họa ~46% → ảnh phụ to hơn ~3 lần
-        const topBoxH = (availH - rowGap) * 0.54
-        const botBoxH = (availH - rowGap) * 0.46
+        // Ô ảnh phụ: rộng chia đều; cao đủ để không bị cắt (ảnh phụ đã đẹp, giữ nguyên cỡ)
+        const subW = (fullW - gap * (n - 1)) / n
+        const botBoxH = Math.min(60, subW)         // hàng dưới ~<=60mm (ảnh phụ vẫn to)
+        // Ảnh chính lấy toàn bộ chiều cao còn lại → to hết mức có thể
+        const topBoxH = availH - rowGap - botBoxH
         drawFit(mainImg, M, py, fullW, topBoxH)
 
-        // Ảnh minh họa: các ô BẰNG NHAU, chia đều bề ngang, cao hết hàng dưới
-        const subW = (fullW - gap * (n - 1)) / n
         const by = py + topBoxH + rowGap
         let bx = M
         subImgs.slice(0, 3).forEach((g) => { drawFit(g, bx, by, subW, botBoxH); bx += subW + gap })
