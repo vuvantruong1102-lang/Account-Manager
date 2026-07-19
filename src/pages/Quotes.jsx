@@ -55,13 +55,15 @@ export default function Quotes() {
 
   const load = async () => {
     setLoading(true)
-    const [{ data: q }, { data: p }, { data: s }, { data: c }] = await Promise.all([
+    const [qr, pr, sr, cr] = await Promise.all([
       supabase.from('crm_quotes').select('*').order('created_at', { ascending: false }),
-      supabase.from('crm_products').select('id, name, short_name, invoice_name, sku, base_price, unit, description, image_url, product_url'),
-      supabase.from('crm_gift_sets').select('id, name, short_name, invoice_name, sku, price, unit, description, image_url, gallery, items'),
+      supabase.from('crm_products').select('*'),
+      supabase.from('crm_gift_sets').select('*'),
       supabase.from('crm_customers').select('company_name, address, tax_code, contact_person, contact_email'),
     ])
-    setRows(q || []); setProducts(p || []); setSets(s || []); setCustomers(c || []); setLoading(false)
+    if (sr.error) console.error('Lỗi tải set quà:', sr.error.message)
+    if (pr.error) console.error('Lỗi tải sản phẩm:', pr.error.message)
+    setRows(qr.data || []); setProducts(pr.data || []); setSets(sr.data || []); setCustomers(cr.data || []); setLoading(false)
   }
   useEffect(() => { load() }, [])
 
@@ -129,13 +131,23 @@ export default function Quotes() {
       notes: form.notes, valid_until: form.valid_until || null,
     }
     let saved
-    if (editId) {
-      await supabase.from('crm_quotes').update(payload).eq('id', editId)
-      saved = { ...payload, id: editId, created_at: form.created_at }
-    } else {
-      const { data } = await supabase.from('crm_quotes').insert(payload).select().single()
-      saved = data || payload
+    const runSave = async (pl) => {
+      if (editId) {
+        const { error } = await supabase.from('crm_quotes').update(pl).eq('id', editId)
+        return { data: { ...pl, id: editId, created_at: form.created_at }, error }
+      }
+      const { data, error } = await supabase.from('crm_quotes').insert(pl).select().single()
+      return { data, error }
     }
+    let res = await runSave(payload)
+    // Nếu cột is_comparison chưa có trong DB thì lưu lại không kèm cột đó
+    if (res.error && /is_comparison/.test(res.error.message || '')) {
+      const { is_comparison, ...fallback } = payload
+      res = await runSave(fallback)
+      if (!res.error) alert('Đã lưu, nhưng chưa chạy migration cột is_comparison — báo giá so sánh sẽ chưa lưu được chế độ. Hãy chạy supabase_migration_giftsets.sql.')
+    }
+    if (res.error) { alert('Lưu báo giá thất bại: ' + res.error.message); return }
+    saved = res.data || payload
     setOpen(false); load()
     if (saved) setTimeout(() => exportQuotePDF(saved), 100)
   }
