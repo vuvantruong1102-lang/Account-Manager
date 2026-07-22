@@ -35,6 +35,45 @@ const fmtDate = (d) => {
 }
 const imgFmt = (url) => (url && url.startsWith('data:image/png')) ? 'PNG' : 'JPEG'
 
+// Tách 1 dòng markdown thành các đoạn {text, bold}. Hỗ trợ **đậm** và *nghiêng*.
+function parseMd(line) {
+  const tokens = []
+  const re = /(\*\*[^*]+\*\*|\*[^*]+\*)/g
+  let last = 0, m
+  while ((m = re.exec(line)) !== null) {
+    if (m.index > last) tokens.push({ text: line.slice(last, m.index), bold: false })
+    const t = m[0]
+    if (t.startsWith('**')) tokens.push({ text: t.slice(2, -2), bold: true })
+    else tokens.push({ text: t.slice(1, -1), bold: false, italic: true })
+    last = m.index + t.length
+  }
+  if (last < line.length) tokens.push({ text: line.slice(last), bold: false })
+  return tokens.length ? tokens : [{ text: line, bold: false }]
+}
+
+// Vẽ đoạn văn có markdown, tự xuống dòng theo maxW. Trả về y mới.
+// Roboto không kèm italic thật nên phần *nghiêng* vẫn dùng regular (giữ đúng nội dung).
+function drawMdParagraph(doc, text, x, y, maxW, lh, fontSize, INK) {
+  doc.setFontSize(fontSize).setTextColor(...INK)
+  String(text).split('\n').forEach((rawLine) => {
+    const tokens = parseMd(rawLine)
+    let cursorX = x
+    tokens.forEach((tk) => {
+      doc.setFont('Roboto', tk.bold ? 'bold' : 'normal')
+      const words = tk.text.split(/(\s+)/)
+      words.forEach((w) => {
+        if (w === '') return
+        const ww = doc.getTextWidth(w)
+        if (cursorX + ww > x + maxW && w.trim() !== '') { y += lh; cursorX = x }
+        doc.text(w, cursorX, y)
+        cursorX += ww
+      })
+    })
+    y += lh
+  })
+  return y
+}
+
 function addFonts(doc) {
   doc.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR)
   doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal')
@@ -82,114 +121,91 @@ export function exportPaymentPDF(req) {
 
   // Ngày tháng (in nghiêng, phải)
   y += 6
-  doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...INK)
+  doc.setFont('Roboto', 'normal').setFontSize(10.5).setTextColor(...INK)
   doc.text(fmtDate(req.created_at), W - M, y, { align: 'right' })
 
-  // Kính gửi (khách hàng)
-  y += 10
-  doc.setFont('Roboto', 'normal').setFontSize(10).setTextColor(...INK)
-  const labelX = M
-  const valX = M + 22
-  doc.text('Kính gửi:', labelX, y)
-  doc.setFont('Roboto', 'bold')
-  const cname = (req.company_name || '').toUpperCase()
-  doc.splitTextToSize(cname, W - M - valX).forEach((ln) => { doc.text(ln, valX, y); y += 5 })
-
-  doc.setFont('Roboto', 'normal')
-  if (req.address) {
-    doc.text('Địa chỉ:', labelX, y)
-    doc.splitTextToSize(req.address, W - M - valX).forEach((ln) => { doc.text(ln, valX, y); y += 5 })
-  }
-  if (req.tax_code) {
-    doc.text('MST:', labelX, y)
-    doc.text(String(req.tax_code), valX, y); y += 5
-  }
-
   // Tiêu đề
-  y += 6
-  doc.setFont('Roboto', 'bold').setFontSize(16).setTextColor(...INK)
+  y += 10
+  doc.setFont('Roboto', 'bold').setFontSize(17).setTextColor(...INK)
   doc.text('GIẤY ĐỀ NGHỊ THANH TOÁN', W / 2, y, { align: 'center' })
-  y += 6
-  doc.setFont('Roboto', 'bold').setFontSize(10.5)
+  y += 6.5
+  doc.setFont('Roboto', 'bold').setFontSize(11.5)
   doc.text(`Số ${req.doc_number || 'DN03'}`, W / 2, y, { align: 'center' })
 
-  // Nội dung (chỉ hiển thị nội dung ô nhập, không có nhãn "V/v:")
-  y += 10
+  // Nội dung (ngay dưới tiêu đề) — hỗ trợ markdown
+  y += 11
   if (req.order_desc && req.order_desc.trim()) {
-    doc.setFont('Roboto', 'normal').setFontSize(10).setTextColor(...INK)
-    doc.splitTextToSize(req.order_desc, W - 2 * M).forEach((ln) => { doc.text(ln, M, y); y += 5 })
+    y = drawMdParagraph(doc, req.order_desc, M, y, W - 2 * M, 6, 11.5, INK)
     y += 3
   }
 
-  // Bảng mặt hàng
-  const items = req.items || []
-  const body = items.map((it, i) => {
-    const unit = Number(it.price) || 0
-    const qty = Number(it.qty) || 0
-    return [
-      String(i + 1),
-      it.name || '',
-      fmt(qty),
-      it.unit || '',
-      fmt(unit),
-      fmt(qty * unit),
-    ]
-  })
-  const total = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0)
-  // Dòng tổng cộng
-  body.push([
-    { content: 'TỔNG CỘNG', colSpan: 5, styles: { fontStyle: 'bold', halign: 'left' } },
-    { content: fmt(total), styles: { fontStyle: 'bold', halign: 'right' } },
-  ])
-
-  autoTable(doc, {
-    startY: y,
-    head: [['STT', 'Tên mặt hàng', 'Số lượng', 'Đơn vị', 'Đơn giá\n(Đã có VAT)', 'Thành tiền\n(VNĐ)']],
-    body,
-    margin: { left: M, right: M },
-    theme: 'grid',
-    styles: { font: 'Roboto', fontSize: 9, cellPadding: 2.5, textColor: INK, lineColor: [180, 180, 180], lineWidth: 0.2, valign: 'middle' },
-    headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: [245, 245, 245], textColor: INK, fontSize: 9, halign: 'center', valign: 'middle', lineColor: [140, 140, 140], lineWidth: 0.2 },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 12 },
-      1: { halign: 'left' },
-      2: { halign: 'center', cellWidth: 20 },
-      3: { halign: 'center', cellWidth: 18 },
-      4: { halign: 'right', cellWidth: 28 },
-      5: { halign: 'right', cellWidth: 30 },
-    },
-  })
-
-  y = doc.lastAutoTable.finalY + 8
-
-  // Bằng chữ
-  doc.setFont('Roboto', 'bold').setFontSize(10).setTextColor(...INK)
-  const bcLabel = 'Bằng chữ: '
-  doc.text(bcLabel, M, y)
-  const bcW = doc.getTextWidth(bcLabel)
+  // Kính gửi (khách hàng) — đặt DƯỚI dòng "Căn cứ..."
+  y += 2
+  doc.setFont('Roboto', 'normal').setFontSize(11.5).setTextColor(...INK)
+  const labelX = M
+  const valX = M + 24
+  doc.text('Kính gửi:', labelX, y)
+  doc.setFont('Roboto', 'bold')
+  const cname = (req.company_name || '').toUpperCase()
+  doc.splitTextToSize(cname, W - M - valX).forEach((ln) => { doc.text(ln, valX, y); y += 6 })
   doc.setFont('Roboto', 'normal')
-  doc.splitTextToSize(docSoThanhChu(total), W - M - (M + bcW)).forEach((ln, i) => {
-    doc.text(ln, M + bcW, y + i * 5); if (i > 0) y += 5
-  })
-  y += 10
+  if (req.address) {
+    doc.text('Địa chỉ:', labelX, y)
+    doc.splitTextToSize(req.address, W - M - valX).forEach((ln) => { doc.text(ln, valX, y); y += 6 })
+  }
+  if (req.tax_code) {
+    doc.text('MST:', labelX, y)
+    doc.text(String(req.tax_code), valX, y); y += 6
+  }
+  y += 4
 
-  // Lưu ý (tùy chỉnh)
-  const notes = (req.notes && req.notes.trim()) ? req.notes : DEFAULT_PAYMENT_NOTES
-  doc.setFontSize(9.5).setTextColor(...INK)
-  notes.split('\n').forEach((raw) => {
-    const line = raw.replace(/\s+$/, '')
-    // Dòng "Lưu ý:" in đậm
-    if (/^Lưu ý:/i.test(line)) doc.setFont('Roboto', 'bold')
-    else doc.setFont('Roboto', 'normal')
-    const wrapped = doc.splitTextToSize(line, W - 2 * M)
-    wrapped.forEach((ln) => { doc.text(ln, M, y); y += 5 })
-  })
+  // Bảng mặt hàng (có thể ẩn)
+  const showItems = req.show_items !== false
+  const items = req.items || []
+  const total = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0)
+
+  if (showItems && items.length) {
+    const body = items.map((it, i) => {
+      const unit = Number(it.price) || 0
+      const qty = Number(it.qty) || 0
+      return [String(i + 1), it.name || '', fmt(qty), it.unit || '', fmt(unit), fmt(qty * unit)]
+    })
+    body.push([
+      { content: 'TỔNG CỘNG', colSpan: 5, styles: { fontStyle: 'bold', halign: 'left' } },
+      { content: fmt(total), styles: { fontStyle: 'bold', halign: 'right' } },
+    ])
+    autoTable(doc, {
+      startY: y,
+      head: [['STT', 'Tên mặt hàng', 'Số lượng', 'Đơn vị', 'Đơn giá\n(Đã có VAT)', 'Thành tiền\n(VNĐ)']],
+      body,
+      margin: { left: M, right: M },
+      theme: 'grid',
+      styles: { font: 'Roboto', fontSize: 10, cellPadding: 2.5, textColor: INK, lineColor: [180, 180, 180], lineWidth: 0.2, valign: 'middle' },
+      headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: [245, 245, 245], textColor: INK, fontSize: 10, halign: 'center', valign: 'middle', lineColor: [140, 140, 140], lineWidth: 0.2 },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 12 },
+        1: { halign: 'left' },
+        2: { halign: 'center', cellWidth: 20 },
+        3: { halign: 'center', cellWidth: 18 },
+        4: { halign: 'right', cellWidth: 28 },
+        5: { halign: 'right', cellWidth: 30 },
+      },
+    })
+    y = doc.lastAutoTable.finalY + 8
+  }
+
+  // Nội dung chính (markdown: **đậm**, *nghiêng*)
+  const mainText = (req.notes && req.notes.trim()) ? req.notes : ''
+  if (mainText) {
+    y = drawMdParagraph(doc, mainText, M, y, W - 2 * M, 6.2, 11.5, INK)
+    y += 4
+  }
 
   // Trân trọng + chữ ký — căn phải
   y += 12
   if (y > H - 45) { doc.addPage(); y = 30 }
   const sigX = W - M - 32   // tâm cụm chữ ký nằm về bên phải
-  doc.setFont('Roboto', 'normal').setFontSize(10).setTextColor(...INK)
+  doc.setFont('Roboto', 'normal').setFontSize(11).setTextColor(...INK)
   doc.text('Trân trọng,', sigX, y, { align: 'center' })
   y += 10
   doc.setFont('Roboto', 'normal')
