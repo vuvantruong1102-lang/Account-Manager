@@ -198,6 +198,6 @@ export function exportPaymentPDF(req) {
   doc.setFont('Roboto', 'bold')
   doc.text(SIGNER.name, sigX, y, { align: 'center' })
 
-  const fileName = `DeNghiThanhToan_${(req.doc_number || 'DN03')}_${(req.company_name || '').replace(/[^\w]+/g, '_').slice(0, 20)}.pdf`
+  const fileName = `DNTT_VNF_${req.doc_number || 'DN03'}.pdf`
   doc.save(fileName)
 }
