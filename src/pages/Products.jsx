@@ -8,7 +8,7 @@ import { Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
 const EMPTY = {
   name: '', short_name: '', invoice_name: '', sku: '', unit: 'cái', base_price: '',
   description: '', image_url: '', product_url: '',
-  tiers: [],
+  price_t1: '', price_t2: '', price_t3: '',   // giá bậc: 10-100 / 101-300 / >300
 }
 
 const EMPTY_SET = {
@@ -87,7 +87,7 @@ function ProductsTab({ rows, loading, reload, user }) {
   const fileRef = useRef(null)
 
   const openNew = () => { setForm(EMPTY); setEditId(null); setOpen(true) }
-  const openEdit = (r) => { setForm({ ...EMPTY, ...r, tiers: r.tiers || [] }); setEditId(r.id); setOpen(true) }
+  const openEdit = (r) => { setForm({ ...EMPTY, ...r, price_t1: r.price_t1 ?? '', price_t2: r.price_t2 ?? '', price_t3: r.price_t3 ?? '' }); setEditId(r.id); setOpen(true) }
 
   const save = async () => {
     if (!form.name.trim()) return
@@ -95,13 +95,25 @@ function ProductsTab({ rows, loading, reload, user }) {
       user_id: user.id, name: form.name, short_name: form.short_name, invoice_name: form.invoice_name,
       sku: form.sku, unit: form.unit, base_price: Number(form.base_price) || 0,
       description: form.description, image_url: form.image_url, product_url: form.product_url,
-      tiers: form.tiers.filter((t) => t.min_qty && t.price).map((t) => ({ min_qty: Number(t.min_qty), price: Number(t.price) })),
+      price_t1: form.price_t1 === '' ? null : Number(form.price_t1),
+      price_t2: form.price_t2 === '' ? null : Number(form.price_t2),
+      price_t3: form.price_t3 === '' ? null : Number(form.price_t3),
     }
-    const { error } = editId
-      ? await supabase.from('crm_products').update(payload).eq('id', editId)
-      : await supabase.from('crm_products').insert(payload)
+    const runSave = async (pl) => editId
+      ? await supabase.from('crm_products').update(pl).eq('id', editId)
+      : await supabase.from('crm_products').insert(pl)
+    let { error } = await runSave(payload)
+    // Nếu DB chưa có cột giá bậc thì bỏ đi rồi lưu lại
+    let tries = 0
+    while (error && tries < 4) {
+      const m = (error.message || '').match(/column "?([a-z_0-9]+)"?/i) || (error.message || '').match(/'([a-z_0-9]+)' column/i)
+      const col = m && m[1]
+      if (!col || !(col in payload)) break
+      delete payload[col]; tries++
+      ;({ error } = await runSave(payload))
+    }
     if (error) {
-      alert('Lưu thất bại: ' + error.message + '\n\nNếu lỗi nhắc đến cột "invoice_name"/"short_name", chạy supabase_migration_giftsets.sql.')
+      alert('Lưu thất bại: ' + error.message + '\n\nNếu lỗi nhắc đến cột "price_t1/price_t2/price_t3", chạy supabase_migration_giftsets.sql.')
       return
     }
     setOpen(false); reload()
@@ -121,9 +133,6 @@ function ProductsTab({ rows, loading, reload, user }) {
   }
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
-  const addTier = () => setForm({ ...form, tiers: [...form.tiers, { min_qty: '', price: '' }] })
-  const updateTier = (i, k, v) => { const tiers = [...form.tiers]; tiers[i] = { ...tiers[i], [k]: v }; setForm({ ...form, tiers }) }
-  const removeTier = (i) => setForm({ ...form, tiers: form.tiers.filter((_, j) => j !== i) })
 
   return (
     <div>
@@ -164,16 +173,13 @@ function ProductsTab({ rows, loading, reload, user }) {
                     <ExternalLink size={11} /> Xem trang sản phẩm
                   </a>
                 )}
-                {r.tiers?.length > 0 && (
+                {(r.price_t1 || r.price_t2 || r.price_t3) && (
                   <div className="mt-3 border-t border-paper-line pt-3">
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-faint">Giá bậc thang</p>
-                    <div className="space-y-1">
-                      {r.tiers.map((t, i) => (
-                        <div key={i} className="flex justify-between text-sm">
-                          <span className="text-ink-soft">Từ {t.min_qty} {r.unit}</span>
-                          <span className="font-medium text-ink">{formatVND(t.price)}</span>
-                        </div>
-                      ))}
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-faint">Giá theo số lượng</p>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between"><span className="text-ink-soft">10–100 {r.unit}</span><span className="font-medium text-ink">{formatVND(r.price_t1 || r.base_price)}</span></div>
+                      <div className="flex justify-between"><span className="text-ink-soft">101–300 {r.unit}</span><span className="font-medium text-ink">{formatVND(r.price_t2 || r.base_price)}</span></div>
+                      <div className="flex justify-between"><span className="text-ink-soft">&gt; 300 {r.unit}</span><span className="font-medium text-ink">{formatVND(r.price_t3 || r.base_price)}</span></div>
                     </div>
                   </div>
                 )}
@@ -240,22 +246,22 @@ function ProductsTab({ rows, loading, reload, user }) {
           </div>
 
           <div className="md:col-span-3">
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="label-field mb-0">Giá bậc thang (theo SL)</label>
-              <button onClick={addTier} className="text-xs font-semibold text-brand hover:underline">+ Thêm mức</button>
+            <label className="label-field mb-1.5">Giá theo số lượng <span className="text-ink-faint">(để trống = dùng giá lẻ)</span></label>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <span className="mb-1 block text-xs text-ink-soft">10 – 100 {form.unit}</span>
+                <input className="input-field py-1.5" type="number" placeholder="Giá ₫" value={form.price_t1} onChange={set('price_t1')} />
+              </div>
+              <div>
+                <span className="mb-1 block text-xs text-ink-soft">101 – 300 {form.unit}</span>
+                <input className="input-field py-1.5" type="number" placeholder="Giá ₫" value={form.price_t2} onChange={set('price_t2')} />
+              </div>
+              <div>
+                <span className="mb-1 block text-xs text-ink-soft">&gt; 300 {form.unit}</span>
+                <input className="input-field py-1.5" type="number" placeholder="Giá ₫" value={form.price_t3} onChange={set('price_t3')} />
+              </div>
             </div>
-            <div className="space-y-2">
-              {form.tiers.length === 0 && <p className="text-xs text-ink-faint">Chưa có mức giá sỉ. Bấm "Thêm mức".</p>}
-              {form.tiers.map((t, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-xs text-ink-soft">Từ</span>
-                  <input className="input-field py-1.5" type="number" placeholder="SL" value={t.min_qty} onChange={(e) => updateTier(i, 'min_qty', e.target.value)} />
-                  <span className="text-xs text-ink-soft">{form.unit} →</span>
-                  <input className="input-field py-1.5" type="number" placeholder="Giá ₫" value={t.price} onChange={(e) => updateTier(i, 'price', e.target.value)} />
-                  <button onClick={() => removeTier(i)} className="rounded-lg p-1.5 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><X size={15} /></button>
-                </div>
-              ))}
-            </div>
+            <p className="mt-1.5 text-[11px] text-ink-faint">Khi tạo báo giá, nhập số lượng sẽ tự nhảy giá theo bậc. SL &lt; 10 dùng giá bậc 10–100. Vẫn sửa tay được.</p>
           </div>
         </div>
         <div className="mt-6 flex justify-end gap-2">
@@ -294,6 +300,8 @@ function SetsTab({ sets, products, loading, reload, user }) {
       items: form.items.map((it) => ({
         product_id: it.product_id, name: it.name, sku: it.sku || '',
         qty: Number(it.qty) || 1, price: Number(it.price) || 0, image_url: it.image_url || '',
+        base_price: it.base_price ?? (Number(it.price) || 0),
+        price_t1: it.price_t1 ?? null, price_t2: it.price_t2 ?? null, price_t3: it.price_t3 ?? null,
       })),
       description: form.description, image_url: form.image_url,
       gallery: (form.gallery || []).filter(Boolean).slice(0, 3),
@@ -342,6 +350,8 @@ function SetsTab({ sets, products, loading, reload, user }) {
       items: [...form.items, {
         product_id: p.id, name: p.short_name || p.name, sku: p.sku || '',
         qty: 1, price: Number(p.base_price) || 0, image_url: p.image_url || '',
+        base_price: Number(p.base_price) || 0,
+        price_t1: p.price_t1 ?? null, price_t2: p.price_t2 ?? null, price_t3: p.price_t3 ?? null,
       }],
     })
     setPicker('')

@@ -16,12 +16,51 @@ const newItem = () => ({
   kind: 'product', ref_id: '', name: '', invoice_name: '', model: '',
   qty: 1, unit: 'cái', price: 0, note: '',
   image_url: '', description: '', product_url: '',
+  price_manual: false,    // true = user tự sửa giá, ngừng tự tính theo bậc
+  tier_source: null,      // { kind:'product', base, t1,t2,t3 } | { kind:'set', comps:[{qty,base,t1,t2,t3}] }
   // Chỉ dùng khi kind === 'set':
   gallery: [],            // ảnh minh họa set
   set_lines: [],          // [{qty, name}] để mô tả thành phần
   set_desc: '',           // thông số / mô tả set (hiện ở trang thông tin set)
   set_components: [],     // [{name, short_name, invoice_name, description, image_url}] chi tiết SP thành phần
 })
+
+// Chọn giá bậc theo số lượng: <=100 → t1, 101-300 → t2, >300 → t3.
+// SL < 10 vẫn dùng t1. Bậc trống thì lùi về base.
+function tierUnitPrice(src, qty) {
+  const n = Number(qty) || 0
+  const pick = (t1, t2, t3, base) => {
+    let p
+    if (n > 300) p = t3
+    else if (n > 100) p = t2
+    else p = t1
+    p = (p === null || p === undefined || p === '') ? null : Number(p)
+    return (p == null || isNaN(p)) ? (Number(base) || 0) : p
+  }
+  if (!src) return null
+  if (src.kind === 'product') {
+    return pick(src.t1, src.t2, src.t3, src.base)
+  }
+  if (src.kind === 'set') {
+    // Giá set = tổng (đơn giá bậc của từng thành phần × qty thành phần trong 1 set)
+    // Bậc giá của mỗi thành phần chọn theo TỔNG số lượng thành phần đó = qty set × qty thành phần
+    return (src.comps || []).reduce((sum, c) => {
+      const compQty = Number(c.qty) || 1
+      const compTotal = n * compQty
+      const pickQ = (t1, t2, t3, base) => {
+        let p
+        if (compTotal > 300) p = t3
+        else if (compTotal > 100) p = t2
+        else p = t1
+        p = (p === null || p === undefined || p === '') ? null : Number(p)
+        return (p == null || isNaN(p)) ? (Number(base) || 0) : p
+      }
+      const u = pickQ(c.t1, c.t2, c.t3, c.base)
+      return sum + u * compQty
+    }, 0)
+  }
+  return null
+}
 
 // Lưu ý mặc định — user có thể sửa trong giao diện
 const DEFAULT_NOTES = [
@@ -344,11 +383,15 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
   }, [])
 
   const pickProduct = (p) => {
+    const src = { kind: 'product', base: Number(p.base_price) || 0, t1: p.price_t1, t2: p.price_t2, t3: p.price_t3 }
+    const qty = Number(item.qty) || 1
+    const auto = tierUnitPrice(src, qty)
     onChange({
       kind: 'product', ref_id: p.id,
       name: p.short_name || p.name, invoice_name: p.invoice_name || p.name, model: p.sku || '',
-      unit: p.unit || 'cái', price: Number(p.base_price) || 0,
+      unit: p.unit || 'cái', price: auto != null ? auto : (Number(p.base_price) || 0),
       image_url: p.image_url || '', description: p.description || '', product_url: p.product_url || '',
+      price_manual: false, tier_source: src,
     })
     setPickerOpen(false); setQ('')
   }
@@ -367,15 +410,30 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
         image_url: p?.image_url || c.image_url || '',
       }
     })
+    // Nguồn tính giá bậc: mỗi thành phần lưu base + 3 bậc (theo sản phẩm lẻ)
+    const tierComps = (s.items || []).map((c) => {
+      const p = products.find((pr) => pr.id === c.product_id)
+      return {
+        qty: Number(c.qty) || 1,
+        base: c.base_price ?? p?.base_price ?? Number(c.price) ?? 0,
+        t1: c.price_t1 ?? p?.price_t1 ?? null,
+        t2: c.price_t2 ?? p?.price_t2 ?? null,
+        t3: c.price_t3 ?? p?.price_t3 ?? null,
+      }
+    })
+    const tierSrc = { kind: 'set', comps: tierComps }
+    const setQty = Number(item.qty) || 1
+    const autoSet = tierUnitPrice(tierSrc, setQty)
     onChange({
       kind: 'set', ref_id: s.id,
       name: s.short_name || s.name, invoice_name: s.invoice_name || s.name, model: s.sku || '',
-      unit: s.unit || 'set', price: Number(s.price) || 0,
+      unit: s.unit || 'set', price: autoSet != null ? autoSet : (Number(s.price) || 0),
       image_url: s.image_url || '', description: compDesc, product_url: '',
       gallery: s.gallery || [],
       set_lines: setLines,
       set_desc: s.description || '',   // Thông số / mô tả set → hiện ở trang thông tin set
       set_components: components,
+      price_manual: false, tier_source: tierSrc,
     })
     setPickerOpen(false); setQ('')
   }
@@ -384,6 +442,25 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
   const setMatches = sets.filter((s) => (s.name + ' ' + (s.short_name || '') + ' ' + (s.sku || '')).toLowerCase().includes(q.toLowerCase())).slice(0, 50)
 
   const set = (k) => (e) => onChange({ [k]: e.target.value })
+
+  // Đổi số lượng → tự tính lại đơn giá theo bậc (nếu chưa sửa tay)
+  const onQtyChange = (e) => {
+    const qty = e.target.value
+    const patch = { qty }
+    if (!item.price_manual && item.tier_source) {
+      const auto = tierUnitPrice(item.tier_source, qty)
+      if (auto != null) patch.price = auto
+    }
+    onChange(patch)
+  }
+  // Sửa tay đơn giá → ngừng tự tính
+  const onPriceChange = (e) => onChange({ price: e.target.value, price_manual: true })
+  // Nút khôi phục giá tự động theo bậc
+  const resetTierPrice = () => {
+    if (!item.tier_source) return
+    const auto = tierUnitPrice(item.tier_source, item.qty)
+    onChange({ price: auto != null ? auto : item.price, price_manual: false })
+  }
 
   return (
     <div className="rounded-xl border border-paper-line bg-white p-3">
@@ -452,7 +529,7 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div>
               <label className="text-[11px] font-medium text-ink-faint">Số lượng</label>
-              <input className="input-field py-1.5 text-center text-sm" type="number" value={item.qty} onChange={set('qty')} />
+              <input className="input-field py-1.5 text-center text-sm" type="number" value={item.qty} onChange={onQtyChange} />
             </div>
             <div>
               <label className="text-[11px] font-medium text-ink-faint">Đơn vị</label>
@@ -460,7 +537,10 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
             </div>
             <div>
               <label className="text-[11px] font-medium text-ink-faint">Đơn giá (chưa VAT)</label>
-              <input className="input-field py-1.5 text-right text-sm" type="number" value={item.price} onChange={set('price')} />
+              <input className="input-field py-1.5 text-right text-sm" type="number" value={item.price} onChange={onPriceChange} />
+              {item.tier_source && item.price_manual && (
+                <button onClick={resetTierPrice} className="mt-0.5 text-[10px] font-medium text-brand hover:underline">↺ Giá tự động theo SL</button>
+              )}
             </div>
             <div>
               <label className="text-[11px] font-medium text-ink-faint">Thành tiền (chưa VAT)</label>
