@@ -101,7 +101,7 @@ export function exportPaymentPDF(req) {
     doc.splitTextToSize(req.address, W - M - valX).forEach((ln) => { doc.text(ln, valX, y); y += 5 })
   }
   if (req.tax_code) {
-    doc.text(`MST: ${req.tax_code}`, labelX, y); y += 5
+    doc.text(`MST: ${req.tax_code}`, valX, y); y += 5
   }
 
   // Tiêu đề
@@ -112,18 +112,13 @@ export function exportPaymentPDF(req) {
   doc.setFont('Roboto', 'bold').setFontSize(10.5)
   doc.text(`Số ${req.doc_number || 'DN03'}`, W / 2, y, { align: 'center' })
 
-  // V/v
+  // Nội dung (chỉ hiển thị nội dung ô nhập, không có nhãn "V/v:")
   y += 10
-  doc.setFont('Roboto', 'bold').setFontSize(10).setTextColor(...INK)
-  const vvLabel = 'V/v: '
-  doc.text(vvLabel, M, y)
-  const vvW = doc.getTextWidth(vvLabel)
-  doc.setFont('Roboto', 'normal')
-  doc.splitTextToSize(`Thanh toán cho đơn hàng: ${req.order_desc || ''}`, W - M - (M + vvW)).forEach((ln, i) => {
-    doc.text(ln, M + vvW, y + i * 5)
-    if (i > 0) y += 5
-  })
-  y += 8
+  if (req.order_desc && req.order_desc.trim()) {
+    doc.setFont('Roboto', 'normal').setFontSize(10).setTextColor(...INK)
+    doc.splitTextToSize(req.order_desc, W - 2 * M).forEach((ln) => { doc.text(ln, M, y); y += 5 })
+    y += 3
+  }
 
   // Bảng mặt hàng
   const items = req.items || []
@@ -189,17 +184,18 @@ export function exportPaymentPDF(req) {
     wrapped.forEach((ln) => { doc.text(ln, M, y); y += 5 })
   })
 
-  // Trân trọng + chữ ký
+  // Trân trọng + chữ ký — căn phải
   y += 12
   if (y > H - 45) { doc.addPage(); y = 30 }
+  const sigX = W - M - 32   // tâm cụm chữ ký nằm về bên phải
   doc.setFont('Roboto', 'normal').setFontSize(10).setTextColor(...INK)
-  doc.text('Trân trọng,', W / 2, y, { align: 'center' })
+  doc.text('Trân trọng,', sigX, y, { align: 'center' })
   y += 10
   doc.setFont('Roboto', 'normal')
-  doc.text(SIGNER.title, W / 2, y, { align: 'center' })
+  doc.text(SIGNER.title, sigX, y, { align: 'center' })
   y += 18
   doc.setFont('Roboto', 'bold')
-  doc.text(SIGNER.name, W / 2, y, { align: 'center' })
+  doc.text(SIGNER.name, sigX, y, { align: 'center' })
 
   const fileName = `DeNghiThanhToan_${(req.doc_number || 'DN03')}_${(req.company_name || '').replace(/[^\w]+/g, '_').slice(0, 20)}.pdf`
   doc.save(fileName)
