@@ -117,8 +117,11 @@ export function exportQuotePDF(quote) {
   const cmp = !!quote.is_comparison
   const vatRate = Number(quote.vat_percent) || 0
   const vatMul = cmp ? (1 + vatRate / 100) : 1
+  // Làm tròn đến nghìn (giá đã gồm VAT là số chẵn)
+  const roundK = (n) => Math.round((Number(n) || 0) / 1000) * 1000
   const body = items.map((it, i) => {
-    const unit = Math.round((Number(it.price) || 0) * vatMul)
+    // Báo giá so sánh: đơn giá đã gồm VAT → làm tròn đến nghìn. Báo giá thường: giá chưa VAT giữ nguyên.
+    const unit = cmp ? roundK((Number(it.price) || 0) * vatMul) : Math.round(Number(it.price) || 0)
     const base = (Number(it.qty) || 0) * unit
     return [
       String(i + 1), it.name || '',
@@ -147,11 +150,11 @@ export function exportQuotePDF(quote) {
     rowPageBreak: 'avoid',
   })
 
-  // Tổng kết: cộng theo đơn giá đã làm tròn (khớp với cột Thành tiền)
-  // Chế độ so sánh: KHÔNG hiển thị phần tổng cộng
+  // Tổng kết (báo giá thường): thành tiền chưa VAT cộng theo đơn giá đã làm tròn đồng.
+  // Tổng cộng (đã gồm VAT) làm tròn đến nghìn cho chẵn; Tiền VAT = Tổng - Thành tiền.
   const sub = items.reduce((s, it) => s + (Number(it.qty) || 0) * Math.round(Number(it.price) || 0), 0)
-  const vatTotal = Math.round(sub * vatRate / 100)
-  const total = sub + vatTotal
+  const total = roundK(sub * (1 + vatRate / 100))
+  const vatTotal = total - sub
 
   let ty = doc.lastAutoTable.finalY + 6
   const labelX = W - M - 60
@@ -245,12 +248,12 @@ export function exportQuotePDF(quote) {
 
     // Giá set (theo chế độ báo giá: so sánh → đã gồm VAT)
     {
-      const setUnit = (Number(it.price) || 0) * vatMul
+      const setUnit = cmp ? roundK((Number(it.price) || 0) * vatMul) : Math.round(Number(it.price) || 0)
       if (setUnit > 0) {
         doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...INK)
         doc.text('Giá set:', M, py)
         doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...BRAND)
-        const priceLabel = `${fmt(Math.round(setUnit))} đ / ${it.unit || 'set'}` + (cmp ? ' (đã gồm VAT)' : ' (chưa VAT)')
+        const priceLabel = `${fmt(setUnit)} đ / ${it.unit || 'set'}` + (cmp ? ' (đã gồm VAT)' : ' (chưa VAT)')
         doc.text(priceLabel, M + 20, py)
         py += 7
       }
