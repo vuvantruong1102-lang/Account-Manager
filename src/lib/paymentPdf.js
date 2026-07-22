@@ -101,7 +101,8 @@ export function exportPaymentPDF(req) {
     doc.splitTextToSize(req.address, W - M - valX).forEach((ln) => { doc.text(ln, valX, y); y += 5 })
   }
   if (req.tax_code) {
-    doc.text(`MST: ${req.tax_code}`, valX, y); y += 5
+    doc.text('MST:', labelX, y)
+    doc.text(String(req.tax_code), valX, y); y += 5
   }
 
   // Tiêu đề
