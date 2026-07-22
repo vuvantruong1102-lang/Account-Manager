@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, MessageSquareText, PhoneCall, Building2, Store,
-  KanbanSquare, History, Package, FileText, LogOut, Target, X,
+  KanbanSquare, History, Package, FileText, LogOut, Target, X, ReceiptText,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -11,6 +11,7 @@ const NAV = [
   { to: '/sales', label: 'Sales', icon: Target },
   { to: '/pipeline', label: 'Pipeline cơ hội', icon: KanbanSquare },
   { to: '/quotes', label: 'Báo giá nhanh', icon: FileText },
+  { to: '/payment-requests', label: 'Đề nghị thanh toán', icon: ReceiptText },
   { to: '/interactions', label: 'Lịch sử & Follow-up', icon: History },
   { section: 'Khách hàng' },
   { to: '/customers/b2b', label: 'Khách hàng B2B', icon: Building2 },
