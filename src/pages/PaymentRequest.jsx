@@ -8,13 +8,23 @@ import { exportPaymentPDF, DEFAULT_PAYMENT_NOTES } from '../lib/paymentPdf'
 
 const newLine = () => ({ name: '', qty: 1, unit: 'Cái', price: 0 })
 
-const DEFAULT_ORDER_DESC = 'Căn cứ vào Hợp đồng số 0612/2024/TOP1-VNF giữa Công ty TNHH Thương mại dịch vụ và sản xuất VNF Việt Nam và Công ty... ký ngày....'
+const DEFAULT_ORDER_DESC = 'Căn cứ vào Hợp đồng số 2207/2026/DT5.1-VNF ký ngày 22/07/2026 giữa Công ty cổ phần năng lượng DT5.1 và Công ty TNHH Thương mại dịch vụ và sản xuất VNF Việt Nam.'
+
+const DEFAULT_MAIN =
+  'Căn cứ Điều 2 về phương thức thanh toán của hợp đồng, Quý công ty cần thanh toán số tiền: **20.000.000đ** (Bằng chữ: *Hai mươi triệu đồng*).\n' +
+  'Kính đề nghị Quý Công ty thanh toán số tiền trên cho chúng tôi, chi tiết cụ thể như sau:\n' +
+  'Tên đơn vị thụ hưởng: Công ty TNHH thương mại dịch vụ và sản xuất VNF Việt Nam\n' +
+  'Số tài khoản: 19135661522015\n' +
+  'Tại ngân hàng: Thương mại cổ phần Kỹ thương Việt Nam (Techcombank)\n' +
+  'Rất mong sớm nhận được sự chấp nhận của Quý Công ty.\n' +
+  'Xin chân thành cảm ơn!'
 
 const EMPTY = {
   doc_number: 'DN03',
   company_name: '', address: '', tax_code: '',
   order_desc: DEFAULT_ORDER_DESC,
-  notes: DEFAULT_PAYMENT_NOTES,
+  show_items: true,
+  notes: DEFAULT_MAIN,
   items: [newLine()],
 }
 
@@ -43,11 +53,12 @@ export default function PaymentRequest() {
   const openNew = () => { setForm({ ...EMPTY, items: [newLine()] }); setEditId(null); setOpen(true) }
   const openEdit = (r) => {
     const items = (r.items?.length ? r.items : [newLine()]).map((it) => ({ ...newLine(), ...it }))
-    setForm({ ...EMPTY, ...r, notes: r.notes || DEFAULT_PAYMENT_NOTES, items })
+    setForm({ ...EMPTY, ...r, notes: r.notes || DEFAULT_MAIN, show_items: r.show_items !== false, items })
     setEditId(r.id); setOpen(true)
   }
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+  const setChk = (k) => (e) => setForm({ ...form, [k]: e.target.checked })
   const setItem = (i, k, v) => setForm((f) => ({ ...f, items: f.items.map((it, j) => j === i ? { ...it, [k]: v } : it) }))
   const addItem = () => setForm((f) => ({ ...f, items: [...f.items, newLine()] }))
   const removeItem = (i) => setForm((f) => ({ ...f, items: f.items.filter((_, j) => j !== i) }))
@@ -77,7 +88,7 @@ export default function PaymentRequest() {
       user_id: user.id,
       doc_number: form.doc_number || 'DN03',
       company_name: form.company_name, address: form.address, tax_code: form.tax_code,
-      order_desc: form.order_desc, notes: form.notes, items,
+      order_desc: form.order_desc, notes: form.notes, show_items: !!form.show_items, items,
     }
     const runSave = async (pl) => {
       if (editId) {
@@ -189,9 +200,13 @@ export default function PaymentRequest() {
           {/* Bảng mặt hàng */}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="label-field mb-0">Mặt hàng</label>
-              <button onClick={addItem} className="text-xs font-semibold text-brand hover:underline">+ Thêm dòng</button>
+              <div className="flex items-center gap-2">
+                <input id="pr-show-items" type="checkbox" checked={form.show_items} onChange={setChk('show_items')} className="h-4 w-4" />
+                <label htmlFor="pr-show-items" className="label-field mb-0">Hiển thị bảng mặt hàng trong đề nghị</label>
+              </div>
+              {form.show_items && <button onClick={addItem} className="text-xs font-semibold text-brand hover:underline">+ Thêm dòng</button>}
             </div>
+            {form.show_items && (<>
             <div className="space-y-2">
               {form.items.map((it, i) => (
                 <div key={i} className="rounded-lg border border-paper-line p-3">
@@ -223,12 +238,14 @@ export default function PaymentRequest() {
               ))}
             </div>
             <p className="mt-2 text-right text-sm font-semibold text-ink">Tổng cộng: {formatVND(total)}</p>
+            </>)}
           </div>
 
-          {/* Lưu ý */}
+          {/* Nội dung chính */}
           <div>
-            <label className="label-field">Nội dung lưu ý <span className="text-ink-faint">(có thể sửa)</span></label>
-            <textarea className="input-field min-h-[160px] font-mono text-xs" value={form.notes} onChange={set('notes')} />
+            <label className="label-field">Nội dung chính <span className="text-ink-faint">(có thể sửa · **đậm** · *nghiêng*)</span></label>
+            <textarea className="input-field min-h-[200px] text-sm" value={form.notes} onChange={set('notes')} />
+            <p className="mt-1 text-[11px] text-ink-faint">Mẹo: bọc chữ trong <b>**hai dấu sao**</b> để in đậm, <i>*một dấu sao*</i> để in nghiêng.</p>
           </div>
         </div>
 
