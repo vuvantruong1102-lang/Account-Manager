@@ -286,7 +286,12 @@ function SetsTab({ sets, products, loading, reload, user }) {
   const openNew = () => { setForm(EMPTY_SET); setEditId(null); setPicker(''); setOpen(true) }
   const openEdit = (r) => { setForm({ ...EMPTY_SET, ...r, items: r.items || [], gallery: r.gallery || [] }); setEditId(r.id); setPicker(''); setOpen(true) }
 
-  const componentsTotal = (items) => items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0)
+  // Giá set hiển thị = tổng đơn giá bậc 10–100 của các thành phần (× SL trong set)
+  const compUnitT1 = (it) => {
+    const p = (it.price_t1 === '' || it.price_t1 == null) ? null : Number(it.price_t1)
+    return (p == null || isNaN(p)) ? (Number(it.price) || Number(it.base_price) || 0) : p
+  }
+  const componentsTotal = (items) => items.reduce((s, it) => s + (Number(it.qty) || 0) * compUnitT1(it), 0)
   const effectivePrice = (f) => f.auto_price ? componentsTotal(f.items) : (Number(f.price) || 0)
 
   const save = async () => {
@@ -297,12 +302,18 @@ function SetsTab({ sets, products, loading, reload, user }) {
       user_id: user.id, name: form.name, short_name: form.short_name, invoice_name: form.invoice_name,
       sku: form.sku, unit: form.unit, auto_price: form.auto_price,
       price: effectivePrice(form),
-      items: form.items.map((it) => ({
-        product_id: it.product_id, name: it.name, sku: it.sku || '',
-        qty: Number(it.qty) || 1, price: Number(it.price) || 0, image_url: it.image_url || '',
-        base_price: it.base_price ?? (Number(it.price) || 0),
-        price_t1: it.price_t1 ?? null, price_t2: it.price_t2 ?? null, price_t3: it.price_t3 ?? null,
-      })),
+      items: form.items.map((it) => {
+        const num = (v) => (v === '' || v == null) ? null : Number(v)
+        const t1 = num(it.price_t1), t2 = num(it.price_t2), t3 = num(it.price_t3)
+        return {
+          product_id: it.product_id, name: it.name, sku: it.sku || '',
+          qty: Number(it.qty) || 1,
+          price: compUnitT1(it),                      // đơn giá tham chiếu = bậc 10–100
+          image_url: it.image_url || '',
+          base_price: it.base_price ?? (Number(it.price) || 0),
+          price_t1: t1, price_t2: t2, price_t3: t3,   // giá bậc RIÊNG trong set
+        }
+      }),
       description: form.description, image_url: form.image_url,
       gallery: (form.gallery || []).filter(Boolean).slice(0, 3),
     }
@@ -475,16 +486,31 @@ function SetsTab({ sets, products, loading, reload, user }) {
             <div className="space-y-2">
               {form.items.length === 0 && <p className="text-xs text-ink-faint">Chưa chọn sản phẩm nào. Tìm và bấm ở ô dưới.</p>}
               {form.items.map((it, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-lg border border-paper-line bg-paper/30 px-2 py-1.5">
-                  {it.image_url
-                    ? <img src={it.image_url} alt="" className="h-9 w-9 rounded object-contain bg-white" />
-                    : <div className="flex h-9 w-9 items-center justify-center rounded bg-white text-ink-faint"><ImgIcon size={14} /></div>}
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{it.name}</span>
-                  <span className="text-xs text-ink-soft">SL</span>
-                  <input className="input-field w-16 py-1 text-center text-sm" type="number" min="1" value={it.qty} onChange={(e) => updateComp(i, 'qty', e.target.value)} />
-                  <span className="text-xs text-ink-soft">Giá</span>
-                  <input className="input-field w-28 py-1 text-right text-sm" type="number" value={it.price} onChange={(e) => updateComp(i, 'price', e.target.value)} />
-                  <button onClick={() => removeComp(i)} className="rounded-lg p-1.5 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><X size={15} /></button>
+                <div key={i} className="rounded-lg border border-paper-line bg-paper/30 px-2 py-2">
+                  <div className="flex items-center gap-2">
+                    {it.image_url
+                      ? <img src={it.image_url} alt="" className="h-9 w-9 rounded object-contain bg-white" />
+                      : <div className="flex h-9 w-9 items-center justify-center rounded bg-white text-ink-faint"><ImgIcon size={14} /></div>}
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{it.name}</span>
+                    <span className="text-xs text-ink-soft">SL</span>
+                    <input className="input-field w-16 py-1 text-center text-sm" type="number" min="1" value={it.qty} onChange={(e) => updateComp(i, 'qty', e.target.value)} />
+                    <button onClick={() => removeComp(i)} className="rounded-lg p-1.5 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><X size={15} /></button>
+                  </div>
+                  {/* Giá bậc RIÊNG cho sản phẩm này TRONG set (khác giá bán lẻ) */}
+                  <div className="mt-2 grid grid-cols-3 gap-2 pl-11">
+                    <div>
+                      <span className="mb-0.5 block text-[10px] text-ink-faint">10–100</span>
+                      <input className="input-field py-1 text-right text-xs" type="number" placeholder="Giá ₫" value={it.price_t1 ?? ''} onChange={(e) => updateComp(i, 'price_t1', e.target.value)} />
+                    </div>
+                    <div>
+                      <span className="mb-0.5 block text-[10px] text-ink-faint">101–300</span>
+                      <input className="input-field py-1 text-right text-xs" type="number" placeholder="Giá ₫" value={it.price_t2 ?? ''} onChange={(e) => updateComp(i, 'price_t2', e.target.value)} />
+                    </div>
+                    <div>
+                      <span className="mb-0.5 block text-[10px] text-ink-faint">&gt; 300</span>
+                      <input className="input-field py-1 text-right text-xs" type="number" placeholder="Giá ₫" value={it.price_t3 ?? ''} onChange={(e) => updateComp(i, 'price_t3', e.target.value)} />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
