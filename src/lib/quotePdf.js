@@ -12,7 +12,7 @@ const SELLER = {
   name: 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ VÀ SẢN XUẤT VNF VIỆT NAM',
   address: 'Tổ dân phố Phú Mỹ 3, phường Bắc Giang, tỉnh Bắc Ninh',
   office: 'VPĐD tại Hà Nội: 18LK19, KĐT Văn Khê, phường Hà Đông, TP Hà Nội',
-  taxCode: '2400833385',
+  taxCode: '2400883385',
   email: 'contact@yokool.vn',
   website: 'https://yokool.vn/b2b',
 }
@@ -111,7 +111,7 @@ export function exportQuotePDF(quote) {
   })
   y = cy + 4
 
-  // Bảng: STT | Ảnh | Tên | SL | Đơn giá | Thành tiền
+  // Bảng: STT | Tên | SL | Đơn giá | Thành tiền  (đã bỏ cột Ảnh)
   // Chế độ so sánh (is_comparison): đơn giá & thành tiền HIỂN THỊ đã gồm VAT
   const items = quote.items || []
   const cmp = !!quote.is_comparison
@@ -121,7 +121,7 @@ export function exportQuotePDF(quote) {
     const unit = (Number(it.price) || 0) * vatMul
     const base = (Number(it.qty) || 0) * unit
     return [
-      String(i + 1), '', it.name || '',
+      String(i + 1), it.name || '',
       `${fmt(it.qty)} ${it.unit || ''}`.trim(),
       `${fmt(Math.round(unit))} đ`, `${fmt(Math.round(base))} đ`,
     ]
@@ -129,7 +129,7 @@ export function exportQuotePDF(quote) {
 
   autoTable(doc, {
     startY: y,
-    head: [['STT', 'Ảnh', 'Tên sản phẩm / Set quà', 'SL', 'Đơn giá', 'Thành tiền']],
+    head: [['STT', 'Tên sản phẩm / Set quà', 'SL', 'Đơn giá', 'Thành tiền']],
     body,
     margin: { left: M, right: M },
     theme: 'grid',
@@ -138,30 +138,12 @@ export function exportQuotePDF(quote) {
     headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: INK, textColor: [255, 255, 255], fontSize: 9, halign: 'center' },
     columnStyles: {
       0: { halign: 'center', cellWidth: 12 },
-      1: { halign: 'center', cellWidth: 24, minCellHeight: 22 },
-      2: { halign: 'left' },
-      3: { halign: 'center', cellWidth: 20 },
-      4: { halign: 'right', cellWidth: 32 },
-      5: { halign: 'right', cellWidth: 34 },
+      1: { halign: 'left' },
+      2: { halign: 'center', cellWidth: 20 },
+      3: { halign: 'right', cellWidth: 32 },
+      4: { halign: 'right', cellWidth: 34 },
     },
     alternateRowStyles: { fillColor: [250, 250, 249] },
-    didDrawCell: (data) => {
-      if (data.section === 'body' && data.column.index === 1) {
-        const it = items[data.row.index]
-        if (it && it.image_url) {
-          try {
-            const pad = 1.5
-            const maxW = data.cell.width - pad * 2
-            const maxH = data.cell.height - pad * 2
-            const props = doc.getImageProperties(it.image_url)
-            const ratio = props.width / props.height
-            let w = maxW, h = maxW / ratio
-            if (h > maxH) { h = maxH; w = maxH * ratio }
-            doc.addImage(it.image_url, imgFmt(it.image_url), data.cell.x + (data.cell.width - w) / 2, data.cell.y + (data.cell.height - h) / 2, w, h)
-          } catch (e) {}
-        }
-      }
-    },
     rowPageBreak: 'avoid',
   })
 
