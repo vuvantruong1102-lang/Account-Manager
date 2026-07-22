@@ -118,12 +118,12 @@ export function exportQuotePDF(quote) {
   const vatRate = Number(quote.vat_percent) || 0
   const vatMul = cmp ? (1 + vatRate / 100) : 1
   const body = items.map((it, i) => {
-    const unit = (Number(it.price) || 0) * vatMul
+    const unit = Math.round((Number(it.price) || 0) * vatMul)
     const base = (Number(it.qty) || 0) * unit
     return [
       String(i + 1), it.name || '',
       `${fmt(it.qty)} ${it.unit || ''}`.trim(),
-      `${fmt(Math.round(unit))} đ`, `${fmt(Math.round(base))} đ`,
+      `${fmt(unit)} đ`, `${fmt(base)} đ`,
     ]
   })
 
@@ -147,10 +147,10 @@ export function exportQuotePDF(quote) {
     rowPageBreak: 'avoid',
   })
 
-  // Tổng kết: thành tiền chưa VAT → VAT chung theo quote.vat_percent
+  // Tổng kết: cộng theo đơn giá đã làm tròn (khớp với cột Thành tiền)
   // Chế độ so sánh: KHÔNG hiển thị phần tổng cộng
-  const sub = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0)
-  const vatTotal = sub * vatRate / 100
+  const sub = items.reduce((s, it) => s + (Number(it.qty) || 0) * Math.round(Number(it.price) || 0), 0)
+  const vatTotal = Math.round(sub * vatRate / 100)
   const total = sub + vatTotal
 
   let ty = doc.lastAutoTable.finalY + 6
