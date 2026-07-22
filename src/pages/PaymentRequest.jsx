@@ -11,11 +11,12 @@ const newLine = () => ({ name: '', qty: 1, unit: 'Cái', price: 0 })
 const DEFAULT_ORDER_DESC = 'Căn cứ vào Hợp đồng số 2207/2026/DT5.1-VNF ký ngày 22/07/2026 giữa Công ty cổ phần năng lượng DT5.1 và Công ty TNHH Thương mại dịch vụ và sản xuất VNF Việt Nam.'
 
 const DEFAULT_MAIN =
-  'Căn cứ Điều 2 về phương thức thanh toán của hợp đồng, Quý công ty cần thanh toán số tiền: **20.000.000đ** (Bằng chữ: *Hai mươi triệu đồng*).\n' +
+  'Căn cứ Điều 2 về phương thức thanh toán của hợp đồng, Quý công ty cần thanh toán:\n' +
+  'Số tiền: **20.000.000đ** (Bằng chữ: *Hai mươi triệu đồng*).\n' +
   'Kính đề nghị Quý Công ty thanh toán số tiền trên cho chúng tôi, chi tiết cụ thể như sau:\n' +
-  'Tên đơn vị thụ hưởng: Công ty TNHH thương mại dịch vụ và sản xuất VNF Việt Nam\n' +
-  'Số tài khoản: 19135661522015\n' +
-  'Tại ngân hàng: Thương mại cổ phần Kỹ thương Việt Nam (Techcombank)\n' +
+  '     + Tên đơn vị thụ hưởng: **Công ty TNHH thương mại dịch vụ và sản xuất VNF Việt Nam**\n' +
+  '     + Số tài khoản: 19135661522015\n' +
+  '     + Tại ngân hàng: Thương mại cổ phần Kỹ thương Việt Nam (Techcombank)\n' +
   'Rất mong sớm nhận được sự chấp nhận của Quý Công ty.\n' +
   'Xin chân thành cảm ơn!'
 
