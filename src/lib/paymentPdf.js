@@ -132,15 +132,8 @@ export function exportPaymentPDF(req) {
   doc.setFont('Roboto', 'bold').setFontSize(11.5)
   doc.text(`Số ${req.doc_number || 'DN03'}`, W / 2, y, { align: 'center' })
 
-  // Nội dung (ngay dưới tiêu đề) — hỗ trợ markdown
+  // Kính gửi (khách hàng) — đặt TRÊN dòng "Căn cứ..."
   y += 11
-  if (req.order_desc && req.order_desc.trim()) {
-    y = drawMdParagraph(doc, req.order_desc, M, y, W - 2 * M, 6, 11.5, INK)
-    y += 3
-  }
-
-  // Kính gửi (khách hàng) — đặt DƯỚI dòng "Căn cứ..."
-  y += 2
   doc.setFont('Roboto', 'normal').setFontSize(11.5).setTextColor(...INK)
   const labelX = M
   const valX = M + 24
@@ -158,6 +151,12 @@ export function exportPaymentPDF(req) {
     doc.text(String(req.tax_code), valX, y); y += 6
   }
   y += 4
+
+  // Nội dung "Căn cứ..." — dưới Kính gửi, hỗ trợ markdown
+  if (req.order_desc && req.order_desc.trim()) {
+    y = drawMdParagraph(doc, req.order_desc, M, y, W - 2 * M, 6, 11.5, INK)
+    y += 4
+  }
 
   // Bảng mặt hàng (có thể ẩn)
   const showItems = req.show_items !== false
