@@ -39,12 +39,12 @@ function tierUnitPrice(src, qty) {
   }
   if (!src) return null
   if (src.kind === 'product') {
-    return pick(src.t1, src.t2, src.t3, src.base)
+    return Math.round(pick(src.t1, src.t2, src.t3, src.base))
   }
   if (src.kind === 'set') {
     // Giá set = tổng (đơn giá bậc của từng thành phần × qty thành phần trong 1 set)
     // Bậc giá của mỗi thành phần chọn theo TỔNG số lượng thành phần đó = qty set × qty thành phần
-    return (src.comps || []).reduce((sum, c) => {
+    const total = (src.comps || []).reduce((sum, c) => {
       const compQty = Number(c.qty) || 1
       const compTotal = n * compQty
       const pickQ = (t1, t2, t3, base) => {
@@ -55,9 +55,10 @@ function tierUnitPrice(src, qty) {
         p = (p === null || p === undefined || p === '') ? null : Number(p)
         return (p == null || isNaN(p)) ? (Number(base) || 0) : p
       }
-      const u = pickQ(c.t1, c.t2, c.t3, c.base)
+      const u = Math.round(pickQ(c.t1, c.t2, c.t3, c.base))
       return sum + u * compQty
     }, 0)
+    return Math.round(total)
   }
   return null
 }
