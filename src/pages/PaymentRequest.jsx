@@ -8,10 +8,12 @@ import { exportPaymentPDF, DEFAULT_PAYMENT_NOTES } from '../lib/paymentPdf'
 
 const newLine = () => ({ name: '', qty: 1, unit: 'Cái', price: 0 })
 
+const DEFAULT_ORDER_DESC = 'Căn cứ vào Hợp đồng số 0612/2024/TOP1-VNF giữa Công ty TNHH Thương mại dịch vụ và sản xuất VNF Việt Nam và Công ty... ký ngày....'
+
 const EMPTY = {
   doc_number: 'DN03',
   company_name: '', address: '', tax_code: '',
-  order_desc: '',
+  order_desc: DEFAULT_ORDER_DESC,
   notes: DEFAULT_PAYMENT_NOTES,
   items: [newLine()],
 }
@@ -178,9 +180,9 @@ export default function PaymentRequest() {
               <label className="label-field">MST khách hàng</label>
               <input className="input-field" value={form.tax_code} onChange={set('tax_code')} />
             </div>
-            <div>
-              <label className="label-field">V/v: Thanh toán cho đơn hàng</label>
-              <input className="input-field" value={form.order_desc} onChange={set('order_desc')} placeholder="VD: ổ điện du lịch" />
+            <div className="sm:col-span-2">
+              <label className="label-field">Nội dung (hiện ngay dưới tiêu đề) <span className="text-ink-faint">(có thể sửa)</span></label>
+              <textarea className="input-field min-h-[70px]" value={form.order_desc} onChange={set('order_desc')} placeholder="Căn cứ vào Hợp đồng số... giữa... và... ký ngày..." />
             </div>
           </div>
 
