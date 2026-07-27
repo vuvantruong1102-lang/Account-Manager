@@ -246,14 +246,14 @@ export function exportQuotePDF(quote) {
       }
     }
 
-    // Giá set (theo chế độ báo giá: so sánh → đã gồm VAT)
+    // Giá set: LUÔN hiển thị giá đã gồm VAT, bất kể chế độ báo giá
     {
-      const setUnit = cmp ? roundK((Number(it.price) || 0) * vatMul) : Math.round(Number(it.price) || 0)
+      const setUnit = roundK((Number(it.price) || 0) * (1 + vatRate / 100))
       if (setUnit > 0) {
         doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...INK)
         doc.text('Giá set:', M, py)
         doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...BRAND)
-        const priceLabel = `${fmt(setUnit)} đ / ${it.unit || 'set'}` + (cmp ? ' (đã gồm VAT)' : ' (chưa VAT)')
+        const priceLabel = `${fmt(setUnit)} đ / ${it.unit || 'set'} (đã gồm VAT)`
         doc.text(priceLabel, M + 20, py)
         py += 7
       }
