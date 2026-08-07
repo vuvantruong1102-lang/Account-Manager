@@ -12,7 +12,6 @@ import { exportPaymentPDF, DEFAULT_PAYMENT_NOTES } from '../lib/paymentPdf'
 const newLine = () => ({ code: '', name: '', unit: 'Cái', color: 'Đen', qty: 1, price: 0 })
 const newSection = () => ({ title: '', bullets: [''], text: '', image: '', caption: '' })
 
-// Sinh phần mã KH cuối số HĐ từ tên công ty: "CÔNG TY CỔ PHẦN NĂNG LƯỢNG DT5.1" → "DT51"
 function buyerCode(name) {
   if (!name) return 'KH'
   const cleaned = name
@@ -92,7 +91,7 @@ export default function Contracts() {
     try {
       const { data, error } = await supabase
         .from('crm_contracts')
-        .select(`${seqCol}`)
+        .select(seqCol)
         .eq('year', year)
         .order(seqCol, { ascending: false })
         .limit(1)
@@ -100,26 +99,18 @@ export default function Contracts() {
       const seq = (data && data[0]?.[seqCol] ? data[0][seqCol] : 0) + 1
       return { seq, year }
     } catch (e) {
-      console.warn(`Chưa lấy được ${seqCol}:`, e.message)
+      console.warn('genSeq ' + seqCol + ':', e.message)
       return { seq: 1, year }
     }
-  }
-
-  const genNumber = async (buyerName, existingSeq) => {
-    const year = new Date().getFullYear()
-    let seq = existingSeq
-    if (!seq) { seq = (await genSeq('seq')).seq }
-    const num = String(seq).padStart(3, '0')
-    return { number: `${num}/${year}/HĐMB/VNF-${buyerCode(buyerName)}`, seq, year }
   }
 
   const openNew = async () => {
     const base = JSON.parse(JSON.stringify(EMPTY))
     base.payment_notes = DEFAULT_PAYMENT_NOTES
     const year = new Date().getFullYear()
-    const { number, seq } = await genNumber('', null)
-    base.contract_number = number
+    const { seq } = await genSeq('seq')
     base.seq = seq
+    base.contract_number = `${String(seq).padStart(3, '0')}/${year}/HĐMB/VNF-KH`
     const pay = await genSeq('payment_seq')
     base.payment_seq = pay.seq
     base.payment_number = `${String(pay.seq).padStart(3, '0')}/${year}/VNF-DNTT`
@@ -132,21 +123,21 @@ export default function Contracts() {
     f.buyer = { ...EMPTY.buyer, ...(r.buyer || {}) }
     f.seller = { ...DEFAULT_SELLER, ...(r.seller || {}) }
     f.items = (r.items?.length ? r.items : [newLine()]).map((it) => ({ ...newLine(), ...it }))
-    f.quality_terms_text = (r.quality_terms || EMPTY.quality_terms_text.split('\n')).join('\n')
+    f.quality_terms_text = Array.isArray(r.quality_terms) ? r.quality_terms.join('\n') : (r.quality_terms_text || EMPTY.quality_terms_text)
     f.appendix_sections = (r.appendix_sections?.length ? r.appendix_sections : EMPTY.appendix_sections)
     f.payment_notes = r.payment_notes || DEFAULT_PAYMENT_NOTES
     setForm(f); setEditId(r.id); setTab('contract'); setOpen(true)
   }
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
-  const setChk = (k) => (e) => setForm({ ...form, [k]: e.target.checked })
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const setChk = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.checked }))
   const setBuyer = (k) => (e) => setForm((f) => ({ ...f, buyer: { ...f.buyer, [k]: e.target.value } }))
   const setSeller = (k) => (e) => setForm((f) => ({ ...f, seller: { ...f.seller, [k]: e.target.value } }))
   const setItem = (i, k, v) => setForm((f) => ({ ...f, items: f.items.map((it, j) => j === i ? { ...it, [k]: v } : it) }))
   const addItem = () => setForm((f) => ({ ...f, items: [...f.items, newLine()] }))
   const removeItem = (i) => setForm((f) => ({ ...f, items: f.items.filter((_, j) => j !== i) }))
 
-  const pickBuyer = async (name) => {
+  const pickBuyer = (name) => {
     const c = customers.find((x) => x.company_name === name)
     setForm((f) => {
       const buyer = { ...f.buyer, name, address: c?.address || f.buyer.address, tax_code: c?.tax_code || f.buyer.tax_code, rep_name: c?.contact_person || f.buyer.rep_name }
@@ -155,6 +146,7 @@ export default function Contracts() {
       return { ...f, buyer, contract_number: `${seqStr}/${year}/HĐMB/VNF-${buyerCode(name)}` }
     })
   }
+
   const pickProduct = (i, id) => {
     const p = products.find((x) => String(x.id) === String(id))
     if (!p) return
@@ -301,7 +293,7 @@ export default function Contracts() {
     <button
       type="button"
       onClick={() => setTab(id)}
-      className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === id ? 'bg-brand text-white shadow-sm' : 'text-ink-soft hover:bg-paper'}`}
+      className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${tab === id ? 'bg-brand text-white shadow-sm' : 'text-ink-soft hover:bg-paper'}`}
     >{label}</button>
   )
 
@@ -315,7 +307,7 @@ export default function Contracts() {
 
       {loading ? <Spinner /> : rows.length === 0 ? (
         <EmptyState icon={FileSignature} title="Chưa có hợp đồng nào"
-          hint="Bấm “Tạo hợp đồng” để soạn hợp đồng theo mẫu."
+          hint="Bấm \"Tạo hợp đồng\" để soạn hợp đồng theo mẫu."
           action={<button className="btn-primary" onClick={openNew}><Plus size={16} /> Tạo hợp đồng</button>} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-paper-line bg-white">
@@ -354,12 +346,14 @@ export default function Contracts() {
       )}
 
       <Modal open={open} onClose={() => setOpen(false)} title={editId ? 'Sửa hợp đồng' : 'Tạo hợp đồng'} size="xl">
-        <div className="mb-5 flex flex-wrap gap-2 rounded-xl bg-paper/60 p-1.5">
+        {/* Tabs */}
+        <div className="mb-5 flex flex-wrap gap-1.5 rounded-xl bg-paper/60 p-1.5">
           <TabBtn id="contract" label="1 · Hợp đồng" />
           <TabBtn id="warehouse" label="2 · Phiếu xuất kho" />
           <TabBtn id="payment" label="3 · Đề nghị thanh toán" />
         </div>
 
+        {/* ===== TAB 1: HỢP ĐỒNG ===== */}
         {tab === 'contract' && (
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -504,10 +498,12 @@ export default function Contracts() {
           </div>
         )}
 
+        {/* ===== TAB 2: PHIẾU XUẤT KHO ===== */}
         {tab === 'warehouse' && (
           <div className="space-y-6">
             <div className="rounded-xl border border-paper-line bg-paper/40 p-4 text-sm text-ink-soft">
-              Phiếu xuất kho & Biên bản bàn giao dùng chung thông tin Bên A và danh mục hàng hóa ở tab Hợp đồng. Bổ sung số phiếu và ngày xuất kho bên dưới nếu cần khác với hợp đồng.
+              Phiếu xuất kho & Biên bản bàn giao dùng chung thông tin Bên A và danh mục hàng hóa từ tab <b className="text-ink">Hợp đồng</b>.
+              Điền số phiếu và ngày xuất kho riêng bên dưới nếu khác với hợp đồng.
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -519,40 +515,43 @@ export default function Contracts() {
                 <input type="date" className="input-field" value={form.warehouse_date?.slice(0, 10) || ''} onChange={set('warehouse_date')} />
               </div>
               <div className="sm:col-span-2">
-                <label className="label-field">Địa điểm giao / xuất kho</label>
+                <label className="label-field">Địa điểm giao / nhận hàng</label>
                 <input className="input-field" value={form.delivery_address} onChange={set('delivery_address')} placeholder="Địa chỉ giao hàng (dùng chung với Điều 3.2)" />
               </div>
             </div>
             <div className="rounded-xl border border-paper-line p-4">
-              <p className="mb-2 text-sm font-semibold text-ink">Hàng hóa xuất kho ({form.items.filter((it) => it.name).length} mặt hàng)</p>
-              <ul className="space-y-1 text-sm text-ink-soft">
+              <p className="mb-3 text-sm font-semibold text-ink">Hàng hóa xuất kho ({form.items.filter((it) => it.name).length} mặt hàng)</p>
+              <ul className="space-y-1 text-sm">
                 {form.items.filter((it) => it.name).map((it, i) => (
-                  <li key={i} className="flex justify-between border-b border-paper-line/60 py-1 last:border-0">
-                    <span>{it.name} <span className="text-ink-faint">({it.color || '—'})</span></span>
-                    <span>{it.qty} {it.unit}</span>
+                  <li key={i} className="flex justify-between border-b border-paper-line/60 py-1.5 last:border-0">
+                    <span className="text-ink">{it.name} <span className="text-ink-faint">({it.color || '—'})</span></span>
+                    <span className="font-medium text-ink">{it.qty} {it.unit}</span>
                   </li>
                 ))}
-                {form.items.filter((it) => it.name).length === 0 && <li className="text-ink-faint">Chưa có hàng hóa — thêm ở tab Hợp đồng.</li>}
+                {form.items.filter((it) => it.name).length === 0 && (
+                  <li className="text-ink-faint">Chưa có hàng hóa — thêm ở tab Hợp đồng.</li>
+                )}
               </ul>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3">
               <button type="button" className="rounded-lg border border-paper-line px-4 py-2 text-sm font-semibold text-ink-soft hover:bg-paper disabled:opacity-50" disabled={saving} onClick={() => saveAndExport('warehouse')}>
-                <FileText size={15} className="mr-1 inline" /> Xuất Phiếu xuất kho
+                <FileText size={15} className="mr-1.5 inline" />Lưu & Xuất Phiếu xuất kho
               </button>
               <button type="button" className="rounded-lg border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand-50 disabled:opacity-50" disabled={saving} onClick={() => saveAndExport('delivery')}>
-                <FileText size={15} className="mr-1 inline" /> Xuất Biên bản bàn giao
+                <FileText size={15} className="mr-1.5 inline" />Lưu & Xuất Biên bản bàn giao
               </button>
             </div>
           </div>
         )}
 
+        {/* ===== TAB 3: ĐỀ NGHỊ THANH TOÁN ===== */}
         {tab === 'payment' && (
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="label-field">Số đề nghị thanh toán</label>
                 <input className="input-field" value={form.payment_number} onChange={set('payment_number')} placeholder="001/2026/VNF-DNTT" />
-                <p className="mt-1 text-[11px] text-ink-faint">Cú pháp: 001/2026/VNF-DNTT — tự sinh theo năm, có thể sửa.</p>
+                <p className="mt-1 text-[11px] text-ink-faint">Tự sinh theo năm; có thể sửa tay.</p>
               </div>
               <div>
                 <label className="label-field">Ngày đề nghị thanh toán</label>
@@ -568,31 +567,33 @@ export default function Contracts() {
 
             <div className="flex items-center gap-2">
               <input id="pm-items" type="checkbox" checked={form.payment_show_items !== false} onChange={setChk('payment_show_items')} className="h-4 w-4" />
-              <label htmlFor="pm-items" className="text-sm text-ink">Hiển thị bảng chi tiết hàng hóa trong đề nghị thanh toán</label>
+              <label htmlFor="pm-items" className="text-sm text-ink">Hiển thị bảng chi tiết hàng hóa trong phiếu đề nghị thanh toán</label>
             </div>
 
             <div>
-              <div className="mb-1 flex items-center justify-between">
-                <label className="label-field mb-0">Lưu ý / căn cứ (theo mẫu cũ — có thể sửa)</label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="label-field mb-0">Lưu ý / căn cứ <span className="text-ink-faint">(theo mẫu cũ — có thể sửa tự do)</span></label>
                 <button type="button" onClick={() => setForm((f) => ({ ...f, payment_notes: DEFAULT_PAYMENT_NOTES }))} className="text-xs font-semibold text-brand hover:underline">↺ Khôi phục mẫu mặc định</button>
               </div>
-              <textarea className="input-field h-48 font-mono text-xs leading-relaxed" value={form.payment_notes} onChange={set('payment_notes')} />
+              <textarea className="input-field h-52 font-mono text-xs leading-relaxed" value={form.payment_notes} onChange={set('payment_notes')} />
             </div>
 
-            <div className="rounded-xl border border-paper-line bg-paper/40 p-4 text-sm">
-              <p className="text-ink-soft">Tổng giá trị đề nghị thanh toán:</p>
-              <p className="text-lg font-semibold text-ink">{formatVND(grand)}</p>
-              <p className="text-xs italic text-ink-faint">Bằng chữ: {docSoThanhChu(grand).replace(/\.$/, '')} Việt Nam Đồng</p>
+            <div className="flex items-center justify-between rounded-xl border border-paper-line bg-paper/40 p-4">
+              <div>
+                <p className="text-sm text-ink-soft">Tổng giá trị đề nghị thanh toán</p>
+                <p className="text-xl font-bold text-ink">{formatVND(grand)}</p>
+                <p className="text-xs italic text-ink-faint">{docSoThanhChu(grand).replace(/\.$/, '')} Việt Nam Đồng</p>
+              </div>
+              <button type="button" className="btn-primary disabled:opacity-50" disabled={saving} onClick={() => saveAndExport('payment')}>
+                <FileText size={16} className="mr-1.5 inline" />{saving ? 'Đang lưu…' : 'Tạo Đề nghị thanh toán'}
+              </button>
             </div>
-
-            <button type="button" className="btn-primary disabled:opacity-50" disabled={saving} onClick={() => saveAndExport('payment')}>
-              <FileText size={16} /> {saving ? 'Đang lưu…' : 'Tạo Đề nghị thanh toán'}
-            </button>
           </div>
         )}
 
+        {/* Footer */}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-paper-line pt-4">
-          <p className="text-xs text-ink-faint">Mọi thao tác xuất đều tự động lưu hợp đồng trước.</p>
+          <p className="text-xs text-ink-faint">Mọi thao tác xuất đều tự động lưu trước khi tạo PDF.</p>
           <div className="flex flex-wrap justify-end gap-2">
             <button type="button" className="btn-ghost" onClick={() => setOpen(false)}>Hủy</button>
             <button type="button" className="btn-primary disabled:opacity-50" disabled={saving} onClick={() => saveAndExport('contract')}>{saving ? 'Đang lưu…' : 'Lưu & Xuất Hợp đồng'}</button>
