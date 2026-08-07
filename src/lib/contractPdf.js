@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { ROBOTO_REGULAR, ROBOTO_BOLD } from './robotoFont'
+import { TIMES_REGULAR, TIMES_BOLD } from './timesFont'
 import { docSoThanhChu } from './numberToWords'
 
 const INK = [31, 36, 48]
@@ -17,7 +17,7 @@ export const DEFAULT_SELLER = {
   rep_title: 'Giám Đốc',
 }
 
-const fmt = (n) => (Number(n) || 0).toLocaleString('vi-VN')
+const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('vi-VN')
 const dmy = (d) => {
   const dt = d ? new Date(d) : new Date()
   return { d: dt.getDate(), m: dt.getMonth() + 1, y: dt.getFullYear() }
@@ -25,11 +25,11 @@ const dmy = (d) => {
 const stripTitle = (s) => String(s || '').replace(/^\s*(Ông|Bà|Anh|Chị|Ms\.?|Mr\.?)\s+/i, '').trim()
 
 function addFonts(doc) {
-  doc.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR)
-  doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal')
-  doc.addFileToVFS('Roboto-Bold.ttf', ROBOTO_BOLD)
-  doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold')
-  doc.setFont('Roboto', 'normal')
+  doc.addFileToVFS('Times-Regular.ttf', TIMES_REGULAR)
+  doc.addFont('Times-Regular.ttf', 'Times', 'normal')
+  doc.addFileToVFS('Times-Bold.ttf', TIMES_BOLD)
+  doc.addFont('Times-Bold.ttf', 'Times', 'bold')
+  doc.setFont('Times', 'normal')
 }
 
 /* =========================================================
@@ -56,7 +56,7 @@ export function exportContractPDF(data) {
   // In 1 đoạn văn thường
   const para = (text, opt = {}) => {
     const { bold = false, italic = false, size = 11, gap = 1.5, align = 'left', indent = 0, lh = 5 } = opt
-    doc.setFont('Roboto', bold ? 'bold' : 'normal').setFontSize(size).setTextColor(...INK)
+    doc.setFont('Times', bold ? 'bold' : 'normal').setFontSize(size).setTextColor(...INK)
     const lines = doc.splitTextToSize(text, CW - indent)
     lines.forEach((ln) => {
       need(lh)
@@ -70,13 +70,13 @@ export function exportContractPDF(data) {
   // Dòng "Nhãn : giá trị" kiểu bảng info (label căn trái, value thụt vào)
   const infoRow = (label, value, opt = {}) => {
     const { bold = false, labelW = 38, lh = 5 } = opt
-    doc.setFont('Roboto', 'normal').setFontSize(11).setTextColor(...INK)
+    doc.setFont('Times', 'normal').setFontSize(11).setTextColor(...INK)
     const valLines = doc.splitTextToSize(String(value || ''), CW - labelW)
     need(Math.max(lh, valLines.length * lh))
     const startY = y
     doc.text(label, M, y)
     doc.text(':', M + labelW - 3, y)
-    doc.setFont('Roboto', bold ? 'bold' : 'normal')
+    doc.setFont('Times', bold ? 'bold' : 'normal')
     valLines.forEach((ln, i) => {
       if (i > 0) { need(lh); }
       doc.text(ln, M + labelW, startY + i * lh)
@@ -85,15 +85,15 @@ export function exportContractPDF(data) {
   }
 
   /* ---------- Quốc hiệu ---------- */
-  doc.setFont('Roboto', 'bold').setFontSize(12).setTextColor(...INK)
+  doc.setFont('Times', 'bold').setFontSize(12).setTextColor(...INK)
   doc.text('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', W / 2, y, { align: 'center' }); y += 5.5
   doc.setFontSize(11)
   doc.text('Độc lập - Tự do - Hạnh phúc', W / 2, y, { align: 'center' }); y += 8
 
   /* ---------- Tiêu đề ---------- */
-  doc.setFont('Roboto', 'bold').setFontSize(15)
+  doc.setFont('Times', 'bold').setFontSize(15)
   doc.text('HỢP ĐỒNG MUA BÁN HÀNG HÓA', W / 2, y, { align: 'center' }); y += 6
-  doc.setFont('Roboto', 'normal').setFontSize(11)
+  doc.setFont('Times', 'normal').setFontSize(11)
   doc.text(`Số: ${data.contract_number || ''}`, W / 2, y, { align: 'center' }); y += 8
 
   /* ---------- Căn cứ ---------- */
@@ -136,7 +136,9 @@ export function exportContractPDF(data) {
   const items = data.items || []
   const vatRate = Number(data.vat_percent) || 0
   const useVat = data.use_vat !== false
-  const sub = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0)
+  // Làm tròn về số nguyên đồng cho mọi giá trị hiển thị/tính toán
+  const lineTotal = (it) => Math.round((Number(it.qty) || 0) * (Number(it.price) || 0))
+  const sub = items.reduce((s, it) => s + lineTotal(it), 0)
   const vat = useVat ? Math.round(sub * vatRate / 100) : 0
   const grand = sub + vat
 
@@ -146,8 +148,8 @@ export function exportContractPDF(data) {
     it.unit || 'Cái',
     it.color || '',
     fmt(it.qty),
-    fmt(it.price),
-    fmt((Number(it.qty) || 0) * (Number(it.price) || 0)),
+    fmt(Math.round(Number(it.price) || 0)),
+    fmt(lineTotal(it)),
   ])
   const footRows = [
     [{ content: 'TỔNG CỘNG', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold' } }, { content: fmt(sub), styles: { halign: 'right', fontStyle: 'bold' } }],
@@ -162,9 +164,9 @@ export function exportContractPDF(data) {
     foot: footRows,
     margin: { left: M, right: M },
     theme: 'grid',
-    styles: { font: 'Roboto', fontSize: 8.5, cellPadding: 2, textColor: INK, lineColor: [130, 130, 130], lineWidth: 0.2, valign: 'middle' },
-    headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: [242, 242, 242], textColor: INK, halign: 'center', lineColor: [110, 110, 110], lineWidth: 0.25 },
-    footStyles: { font: 'Roboto', fillColor: [255, 255, 255], textColor: INK, lineColor: [130, 130, 130] },
+    styles: { font: 'Times', fontSize: 8.5, cellPadding: 2, textColor: INK, lineColor: [130, 130, 130], lineWidth: 0.2, valign: 'middle' },
+    headStyles: { font: 'Times', fontStyle: 'bold', fillColor: [242, 242, 242], textColor: INK, halign: 'center', lineColor: [110, 110, 110], lineWidth: 0.25 },
+    footStyles: { font: 'Times', fillColor: [255, 255, 255], textColor: INK, lineColor: [130, 130, 130] },
     columnStyles: {
       0: { halign: 'center', cellWidth: 9 },
       1: { halign: 'left' },
@@ -232,15 +234,15 @@ export function exportContractPDF(data) {
   need(45)
   y += 4
   const cA = W * 0.28, cB = W * 0.72
-  doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...INK)
+  doc.setFont('Times', 'bold').setFontSize(11).setTextColor(...INK)
   doc.text('ĐẠI DIỆN BÊN A', cA, y, { align: 'center' })
   doc.text('ĐẠI DIỆN BÊN B', cB, y, { align: 'center' })
   y += 4
-  doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
+  doc.setFont('Times', 'normal').setFontSize(8.5).setTextColor(...SOFT)
   doc.text('(Ký, ghi rõ họ tên, đóng dấu)', cA, y, { align: 'center' })
   doc.text('(Ký, ghi rõ họ tên, đóng dấu)', cB, y, { align: 'center' })
   y += 28
-  doc.setFont('Roboto', 'bold').setFontSize(11).setTextColor(...INK)
+  doc.setFont('Times', 'bold').setFontSize(11).setTextColor(...INK)
   if (buyer.rep_name) doc.text(stripTitle(buyer.rep_name), cA, y, { align: 'center' })
   doc.text(stripTitle(seller.rep_name), cB, y, { align: 'center' })
 
@@ -264,7 +266,7 @@ function renderAppendix(doc, data, ctx) {
   const need = (h) => { if (y + h > H - 18) { doc.addPage(); y = 22 } }
   const para = (text, opt = {}) => {
     const { bold = false, size = 11, gap = 1.5, align = 'left', indent = 0, lh = 5 } = opt
-    doc.setFont('Roboto', bold ? 'bold' : 'normal').setFontSize(size).setTextColor(...INK)
+    doc.setFont('Times', bold ? 'bold' : 'normal').setFontSize(size).setTextColor(...INK)
     doc.splitTextToSize(text, CW - indent).forEach((ln) => {
       need(lh)
       doc.text(ln, align === 'center' ? W / 2 : M + indent, y, { align })
@@ -273,7 +275,7 @@ function renderAppendix(doc, data, ctx) {
     y += gap
   }
 
-  doc.setFont('Roboto', 'bold').setFontSize(14).setTextColor(...INK)
+  doc.setFont('Times', 'bold').setFontSize(14).setTextColor(...INK)
   doc.text('PHỤ LỤC HỢP ĐỒNG', W / 2, y, { align: 'center' }); y += 7
   doc.setFontSize(12)
   const subtitle = data.appendix_subtitle || 'V/v: Quy cách in logo và đóng gói sản phẩm'
@@ -300,7 +302,7 @@ function renderAppendix(doc, data, ctx) {
         const fmtType = (props.fileType || 'PNG').toUpperCase()
         doc.addImage(sec.image, fmtType === 'JPG' ? 'JPEG' : fmtType, (W - iw) / 2, y, iw, ih)
         y += ih + 3
-        if (sec.caption) { doc.setFont('Roboto', 'normal').setFontSize(9.5).setTextColor(...SOFT); need(6); doc.text(sec.caption, W / 2, y, { align: 'center' }); y += 6 }
+        if (sec.caption) { doc.setFont('Times', 'normal').setFontSize(9.5).setTextColor(...SOFT); need(6); doc.text(sec.caption, W / 2, y, { align: 'center' }); y += 6 }
       } catch (e) { console.error('Ảnh phụ lục lỗi:', e) }
     }
     y += 3
@@ -316,7 +318,7 @@ function paginate(doc, W, H) {
   const total = doc.internal.getNumberOfPages()
   for (let i = 1; i <= total; i++) {
     doc.setPage(i)
-    doc.setFont('Roboto', 'normal').setFontSize(9).setTextColor(...SOFT)
+    doc.setFont('Times', 'normal').setFontSize(9).setTextColor(...SOFT)
     doc.text(`Trang ${i}/${total}`, W / 2, H - 10, { align: 'center' })
   }
 }
