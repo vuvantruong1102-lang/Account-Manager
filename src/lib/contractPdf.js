@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { TIMES_REGULAR, TIMES_BOLD } from './timesFont'
+import { TIMES_REGULAR, TIMES_BOLD, TIMES_ITALIC, TIMES_BOLDITALIC } from './timesFont'
 import { docSoThanhChu } from './numberToWords'
 
 const INK = [31, 36, 48]
@@ -29,6 +29,10 @@ function addFonts(doc) {
   doc.addFont('Times-Regular.ttf', 'Times', 'normal')
   doc.addFileToVFS('Times-Bold.ttf', TIMES_BOLD)
   doc.addFont('Times-Bold.ttf', 'Times', 'bold')
+  doc.addFileToVFS('Times-Italic.ttf', TIMES_ITALIC)
+  doc.addFont('Times-Italic.ttf', 'Times', 'italic')
+  doc.addFileToVFS('Times-BoldItalic.ttf', TIMES_BOLDITALIC)
+  doc.addFont('Times-BoldItalic.ttf', 'Times', 'bolditalic')
   doc.setFont('Times', 'normal')
 }
 
@@ -56,7 +60,8 @@ export function exportContractPDF(data) {
   // In 1 đoạn văn thường
   const para = (text, opt = {}) => {
     const { bold = false, italic = false, size = 11, gap = 1.5, align = 'left', indent = 0, lh = 5 } = opt
-    doc.setFont('Times', bold ? 'bold' : 'normal').setFontSize(size).setTextColor(...INK)
+    const style = bold ? (italic ? 'bolditalic' : 'bold') : (italic ? 'italic' : 'normal')
+    doc.setFont('Times', style).setFontSize(size).setTextColor(...INK)
     const lines = doc.splitTextToSize(text, CW - indent)
     lines.forEach((ln) => {
       need(lh)
