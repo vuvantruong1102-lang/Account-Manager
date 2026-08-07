@@ -252,7 +252,7 @@ export function exportDeliveryPDF(data) {
   y += 22
   doc.setFont('Roboto', 'bold').setFontSize(10).setTextColor(...INK)
   doc.text(SIGNER.name.toUpperCase(), cA, y, { align: 'center' })
-  if (data.rep_name) doc.text(String(data.rep_name).toUpperCase(), cB, y, { align: 'center' })
+  if (data.rep_name) doc.text(String(data.rep_name).replace(/^\s*(Ông|Bà|Anh|Chị|Ms\.?|Mr\.?)\s+/i, '').toUpperCase(), cB, y, { align: 'center' })
 
   doc.save(`BienBanBanGiao_${data.doc_number || 'BBBG'}.pdf`)
 }
