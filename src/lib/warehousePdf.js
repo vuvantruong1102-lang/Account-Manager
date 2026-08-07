@@ -177,14 +177,14 @@ export function exportDeliveryPDF(data) {
     const lblW = 42
     doc.text(label, M, y)
     doc.setFont('Roboto', bold ? 'bold' : 'normal')
-    doc.splitTextToSize(String(val || ''), W - M - (M + lblW)).forEach((ln, i) => { doc.text(ln, M + lblW, y); if (i < 100 && i > 0) y += 5 })
+    doc.splitTextToSize(String(val || ''), W - M - (M + lblW)).forEach((ln, i) => { if (i > 0) y += 5; doc.text(ln, M + lblW, y) })
     y += 5
   }
 
   // Bên A (VNF - cố định)
   doc.setFont('Roboto', 'bold').setFontSize(10)
   doc.text('Bên bán hàng (Bên A):', M, y)
-  doc.splitTextToSize(SELLER.name, W - M - (M + 42)).forEach((ln, i) => { doc.text(ln, M + 42, y); if (i > 0) y += 5 }); y += 5
+  doc.splitTextToSize(SELLER.name, W - M - (M + 42)).forEach((ln, i) => { if (i > 0) y += 5; doc.text(ln, M + 42, y) }); y += 5
   line('Địa chỉ:', SELLER.address)
   line('Mã số thuế:', SELLER.taxCode)
   line('Số tài khoản:', SELLER.bank)
@@ -194,7 +194,7 @@ export function exportDeliveryPDF(data) {
   // Bên B (khách - nhập)
   doc.setFont('Roboto', 'bold').setFontSize(10)
   doc.text('Bên mua hàng (Bên B):', M, y)
-  doc.splitTextToSize((data.company_name || '').toUpperCase(), W - M - (M + 42)).forEach((ln, i) => { doc.text(ln, M + 42, y); if (i > 0) y += 5 }); y += 5
+  doc.splitTextToSize((data.company_name || '').toUpperCase(), W - M - (M + 42)).forEach((ln, i) => { if (i > 0) y += 5; doc.text(ln, M + 42, y) }); y += 5
   line('Địa chỉ:', data.address || '……………………………………')
   line('Mã số thuế:', data.tax_code || '……………………')
   line('Đại diện:', `${data.rep_name || '………………………………'}          Chức vụ: ${data.rep_title || '……………'}`)
@@ -252,6 +252,7 @@ export function exportDeliveryPDF(data) {
   y += 22
   doc.setFont('Roboto', 'bold').setFontSize(10).setTextColor(...INK)
   doc.text(SIGNER.name.toUpperCase(), cA, y, { align: 'center' })
+  if (data.rep_name) doc.text(String(data.rep_name).toUpperCase(), cB, y, { align: 'center' })
 
   doc.save(`BienBanBanGiao_${data.doc_number || 'BBBG'}.pdf`)
 }
