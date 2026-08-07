@@ -8,12 +8,13 @@ export function Badge({ children, className = '' }) {
   )
 }
 
-export function Modal({ open, onClose, title, children, wide = false }) {
+export function Modal({ open, onClose, title, children, wide = false, size }) {
   if (!open) return null
+  const maxW = size === 'xl' ? 'max-w-6xl' : size === 'lg' ? 'max-w-4xl' : wide ? 'max-w-3xl' : 'max-w-lg'
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/30 p-4 backdrop-blur-sm">
       <div
-        className={`mt-8 mb-8 w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} card animate-rise`}
+        className={`mt-8 mb-8 w-full ${maxW} card animate-rise`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-paper-line px-6 py-4">
