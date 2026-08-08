@@ -115,7 +115,7 @@ export default function Contracts() {
     base.contract_number = `${String(seq).padStart(3, '0')}/${year}/KH-VNF`
     const pay = await genSeq('payment_seq')
     base.payment_seq = pay.seq
-    base.payment_number = `${String(pay.seq).padStart(3, '0')}/${year}/HĐMB/VNF-KH`
+    base.payment_number = `${String(pay.seq).padStart(3, '0')}/${year}/VNF-DNTT`
     setForm(base); setEditId(null); setTab('contract'); setOpen(true)
   }
 
@@ -135,6 +135,20 @@ export default function Contracts() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const setChk = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.checked }))
+  // Khi nhập số tiền đề nghị: tự điền "Bằng số" và "Bằng chữ" ngay trong nội dung chính
+  const setPaymentAmount = (e) => {
+    const raw = e.target.value
+    setForm((f) => {
+      const num = Number(raw) || 0
+      const soFmt = raw === '' ? '' : num.toLocaleString('vi-VN')
+      const chu = raw === '' ? '' : docSoThanhChu(num).replace(/\.$/, '') + ' Việt Nam Đồng'
+      // Thay dòng "Bằng số:" và "Bằng chữ:" trong nội dung chính (giữ nguyên phần còn lại)
+      let notes = f.payment_notes || ''
+      notes = notes.replace(/(Bằng số:).*$/m, `$1 ${soFmt} VNĐ`)
+      notes = notes.replace(/(Bằng chữ:).*$/m, `$1 ${chu}`)
+      return { ...f, payment_amount: raw, payment_notes: notes }
+    })
+  }
   const setBuyer = (k) => (e) => setForm((f) => ({ ...f, buyer: { ...f.buyer, [k]: e.target.value } }))
   const setSeller = (k) => (e) => setForm((f) => ({ ...f, seller: { ...f.seller, [k]: e.target.value } }))
   const setItem = (i, k, v) => setForm((f) => ({ ...f, items: f.items.map((it, j) => j === i ? { ...it, [k]: v } : it) }))
@@ -148,11 +162,9 @@ export default function Contracts() {
       const year = f.year || new Date().getFullYear()
       const code = buyerCode(name)
       const seqStr = f.seq ? String(f.seq).padStart(3, '0') : '001'
-      const payStr = f.payment_seq ? String(f.payment_seq).padStart(3, '0') : '001'
       return {
         ...f, buyer,
         contract_number: `${seqStr}/${year}/${code}-VNF`,
-        payment_number: `${payStr}/${year}/HĐMB/VNF-${code}`,
       }
     })
   }
@@ -569,8 +581,8 @@ export default function Contracts() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="label-field">Số đề nghị thanh toán</label>
-                <input className="input-field" value={form.payment_number} onChange={set('payment_number')} placeholder="001/2026/HĐMB/VNF-DT51" />
-                <p className="mt-1 text-[11px] text-ink-faint">Cú pháp: 001/2026/HĐMB/VNF-[mã KH] — tự sinh, có thể sửa.</p>
+                <input className="input-field" value={form.payment_number} onChange={set('payment_number')} placeholder="001/2026/VNF-DNTT" />
+                <p className="mt-1 text-[11px] text-ink-faint">Cú pháp: 001/2026/VNF-DNTT — tự tăng dần, có thể sửa.</p>
               </div>
               <div>
                 <label className="label-field">Ngày đề nghị thanh toán</label>
@@ -580,11 +592,11 @@ export default function Contracts() {
 
             <div>
               <label className="label-field">Số tiền đề nghị thanh toán (VNĐ)</label>
-              <input type="number" className="input-field" value={form.payment_amount} onChange={set('payment_amount')} placeholder={`Để trống = dùng tổng đơn (${formatVND(grand)})`} />
+              <input type="number" className="input-field" value={form.payment_amount} onChange={setPaymentAmount} placeholder={`Để trống = dùng tổng đơn (${formatVND(grand)})`} />
               <p className="mt-1 text-[11px] text-ink-faint">
-                Số tiền này thay vào {'{bằng_số}'} và {'{bằng_chữ}'} trong nội dung.
+                Nhập số tiền → tự điền "Bằng số" và "Bằng chữ" vào Nội dung chính bên dưới.
                 {form.payment_amount !== '' && form.payment_amount != null
-                  ? ` Bằng chữ: ${docSoThanhChu(Number(form.payment_amount) || 0).replace(/\.$/, '')} Việt Nam Đồng.`
+                  ? ` (${docSoThanhChu(Number(form.payment_amount) || 0).replace(/\.$/, '')} Việt Nam Đồng)`
                   : ''}
               </p>
             </div>
@@ -606,7 +618,7 @@ export default function Contracts() {
                 <button type="button" onClick={() => setForm((f) => ({ ...f, payment_notes: DEFAULT_PAYMENT_NOTES }))} className="text-xs font-semibold text-brand hover:underline">↺ Khôi phục mẫu mặc định</button>
               </div>
               <textarea className="input-field h-52 font-mono text-xs leading-relaxed" value={form.payment_notes} onChange={set('payment_notes')} />
-              <p className="mt-1 text-[11px] text-ink-faint">{'{bằng_số}'} và {'{bằng_chữ}'} sẽ tự thay bằng số tiền đề nghị ở trên.</p>
+              <p className="mt-1 text-[11px] text-ink-faint">"Bằng số" và "Bằng chữ" tự điền theo số tiền ở trên; bạn vẫn có thể sửa tay tại đây.</p>
             </div>
 
             <div className="flex items-center justify-between rounded-xl border border-paper-line bg-paper/40 p-4">
