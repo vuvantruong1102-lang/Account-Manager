@@ -147,7 +147,7 @@ export function exportContractPDF(data) {
     const r = Math.round(n)
     const near1000 = Math.round(n / 1000) * 1000
     // Nếu rất gần bội số 1000 (chênh <=2đ) thì lấy bội số 1000 cho "đẹp"
-    if (Math.abs(n - near1000) <= 2) return near1000
+    if (Math.abs(n - near1000) <= 3) return near1000
     return r
   }
   const vatExact = useVat ? sub * vatRate / 100 : 0

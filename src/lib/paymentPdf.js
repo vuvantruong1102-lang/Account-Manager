@@ -153,7 +153,7 @@ export function exportPaymentPDF(req) {
   doc.setFont('Roboto', 'bold').setFontSize(18).setTextColor(...INK)
   doc.text('GIẤY ĐỀ NGHỊ THANH TOÁN', W / 2, y, { align: 'center' })
   y += 6.5
-  doc.setFont('Roboto', 'bold').setFontSize(12.5).setTextColor(...BRAND)
+  doc.setFont('Roboto', 'bold').setFontSize(12.5).setTextColor(...INK)
   doc.text(`Số ${req.doc_number || 'DN03'}`, W / 2, y, { align: 'center' })
   doc.setTextColor(...INK)
 
@@ -190,7 +190,7 @@ export function exportPaymentPDF(req) {
   const vatMul = 1 + rate / 100
   const roundTiny = (n) => {
     const near1000 = Math.round(n / 1000) * 1000
-    return Math.abs(n - near1000) <= 2 ? near1000 : Math.round(n)
+    return Math.abs(n - near1000) <= 3 ? near1000 : Math.round(n)
   }
   const unitVat = (it) => Math.round((Number(it.price) || 0) * vatMul)          // đơn giá có VAT (tròn)
   const lineVat = (it) => roundTiny((Number(it.qty) || 0) * (Number(it.price) || 0) * vatMul) // thành tiền có VAT (tròn)
@@ -198,29 +198,30 @@ export function exportPaymentPDF(req) {
 
   if (showItems && items.length) {
     const body = items.map((it, i) => {
-      return [String(i + 1), it.name || '', it.unit || '', fmt(unitVat(it)), fmt(lineVat(it))]
+      return [String(i + 1), it.name || '', fmt(it.qty), it.unit || '', fmt(unitVat(it)), fmt(lineVat(it))]
     })
     // Chỉ thêm dòng TỔNG CỘNG khi có nhiều hơn 1 mặt hàng
     if (items.length > 1) {
       body.push([
-        { content: 'TỔNG CỘNG', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right' } },
+        { content: 'TỔNG CỘNG', colSpan: 5, styles: { fontStyle: 'bold', halign: 'right' } },
         { content: fmt(total), styles: { fontStyle: 'bold', halign: 'right' } },
       ])
     }
     autoTable(doc, {
       startY: y,
-      head: [['STT', 'Tên mặt hàng', 'Đơn vị', 'Đơn giá\n(Đã có VAT)', 'Thành tiền\n(Đã có VAT)']],
+      head: [['STT', 'Tên mặt hàng', 'Số lượng', 'Đơn vị', 'Đơn giá\n(Đã có VAT)', 'Thành tiền\n(Đã có VAT)']],
       body,
       margin: { left: M, right: M },
       theme: 'grid',
       styles: { font: 'Roboto', fontSize: 11, cellPadding: 2.5, textColor: INK, lineColor: [180, 180, 180], lineWidth: 0.2, valign: 'middle' },
       headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: [245, 245, 245], textColor: INK, fontSize: 11, halign: 'center', valign: 'middle', lineColor: [140, 140, 140], lineWidth: 0.2 },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 14 },
+        0: { halign: 'center', cellWidth: 12 },
         1: { halign: 'left' },
-        2: { halign: 'center', cellWidth: 22 },
-        3: { halign: 'right', cellWidth: 34 },
-        4: { halign: 'right', cellWidth: 36 },
+        2: { halign: 'center', cellWidth: 18 },
+        3: { halign: 'center', cellWidth: 16 },
+        4: { halign: 'right', cellWidth: 30 },
+        5: { halign: 'right', cellWidth: 32 },
       },
     })
     y = doc.lastAutoTable.finalY + 8
@@ -257,7 +258,7 @@ export function exportPaymentPDF(req) {
       if (y > H - 40) { doc.addPage(); y = 25 }
       doc.setFont('Roboto', 'bold').setFontSize(12.5).setTextColor(...INK)
       doc.text(label, M + 4, y)
-      doc.setFont('Roboto', 'bold').setFontSize(12.5).setTextColor(...BRAND)
+      doc.setFont('Roboto', 'bold').setFontSize(12.5).setTextColor(...INK)
       doc.splitTextToSize(val, contentW - 32).forEach((ln, i) => { doc.text(ln, M + 32, y); if (i > 0) y += lh })
       doc.setTextColor(...INK)
       y += lh + 0.5
@@ -283,16 +284,13 @@ export function exportPaymentPDF(req) {
   })
   y += 4
 
-  // Trân trọng + chữ ký — căn phải
+  // Chữ ký — căn phải (bỏ "Trân trọng")
   y += 12
   if (y > H - 45) { doc.addPage(); y = 30 }
   const sigX = W - M - 32   // tâm cụm chữ ký nằm về bên phải
-  doc.setFont('Roboto', 'normal').setFontSize(12).setTextColor(...INK)
-  doc.text('Trân trọng,', sigX, y, { align: 'center' })
-  y += 10
-  doc.setFont('Roboto', 'normal')
+  doc.setFont('Roboto', 'bold').setFontSize(12).setTextColor(...INK)
   doc.text(SIGNER.title, sigX, y, { align: 'center' })
-  y += 18
+  y += 26
   doc.setFont('Roboto', 'bold')
   doc.text(SIGNER.name, sigX, y, { align: 'center' })
 
