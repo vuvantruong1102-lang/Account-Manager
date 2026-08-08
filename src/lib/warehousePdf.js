@@ -15,6 +15,7 @@ const SELLER = {
 const SIGNER = { name: 'Vũ Văn Cường', title: 'Giám Đốc' }
 
 const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('vi-VN')
+const stripTitle = (s) => String(s || '').replace(/^\s*(Ông|Bà|Anh|Chị|Ms\.?|Mr\.?|Mrs\.?)\s+/i, '').trim()
 const dmy = (d) => {
   const dt = d ? new Date(d) : new Date()
   return { d: dt.getDate(), m: dt.getMonth() + 1, y: dt.getFullYear() }
@@ -178,7 +179,11 @@ export function exportDeliveryPDF(data) {
     const lblW = 42
     doc.text(label, M, y)
     doc.setFont('Roboto', bold ? 'bold' : 'normal')
-    doc.splitTextToSize(String(val || ''), W - M - (M + lblW)).forEach((ln, i) => { doc.text(ln, M + lblW, y); if (i < 100 && i > 0) y += 5 })
+    const wrapped = doc.splitTextToSize(String(val || ''), W - M - (M + lblW))
+    wrapped.forEach((ln, i) => {
+      if (i > 0) y += 5
+      doc.text(ln, M + lblW, y)
+    })
     y += 5
   }
 
@@ -253,6 +258,7 @@ export function exportDeliveryPDF(data) {
   y += 22
   doc.setFont('Roboto', 'bold').setFontSize(10).setTextColor(...INK)
   doc.text(SIGNER.name.toUpperCase(), cA, y, { align: 'center' })
+  if (data.rep_name) doc.text(stripTitle(data.rep_name).toUpperCase(), cB, y, { align: 'center' })
 
   doc.save(`BienBanBanGiao_${data.doc_number || 'BBBG'}.pdf`)
 }

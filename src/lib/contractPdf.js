@@ -177,7 +177,7 @@ export function exportContractPDF(data) {
       7: { halign: 'right', cellWidth: 24 },
     },
   })
-  y = doc.lastAutoTable.finalY + 3
+  y = doc.lastAutoTable.finalY + 7
 
   para(`Bằng chữ: ${docSoThanhChu(grand).replace(/\.$/, '')} Việt Nam Đồng.`, { bold: true, gap: 3 })
 

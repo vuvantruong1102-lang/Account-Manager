@@ -19,14 +19,19 @@ const SELLER = {
 
 const SIGNER = { name: 'Vũ Văn Cường', title: 'Giám đốc' }
 
+// Lý do / căn cứ (đặt ngay dưới "Kính gửi") — {hd} = số hợp đồng, {buyer} = tên KH
+export const DEFAULT_PAYMENT_ORDER_DESC =
+  'Căn cứ hợp đồng số {hd} giữa Công ty TNHH Thương mại dịch vụ và sản xuất VNF Việt Nam và {buyer}.'
+
+// Nội dung chính — {bằng_số} và {bằng_chữ} sẽ được thay bằng số tiền đề nghị
 export const DEFAULT_PAYMENT_NOTES =
-  'Lưu ý:\n' +
-  '(i)   Điều khoản thanh toán: Thanh toán 100% đơn hàng sau khi nhận được đề nghị thanh toán\n' +
-  '(ii)  Vui lòng thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản sau:\n' +
+  'Căn cứ điều khoản thanh toán của hợp đồng, chúng tôi kính đề nghị Quý công ty thanh toán số tiền:\n' +
+  'Bằng số: {bằng_số} VNĐ\n' +
+  'Bằng chữ: {bằng_chữ}\n' +
+  'vào tài khoản của công ty chúng tôi:\n' +
   'Chủ tài khoản: Công ty TNHH thương mại dịch vụ và sản xuất VNF Việt Nam\n' +
   'Số tài khoản: 19135661522015\n' +
-  'Tại ngân hàng: Thương mại cổ phần Kỹ thương Việt Nam (Techcombank)\n' +
-  '(iii) Vui lòng thanh toán trong vòng năm (05) ngày kể từ ngày đề nghị thanh toán.'
+  'Tại ngân hàng: Thương mại cổ phần Kỹ thương Việt Nam (Techcombank)'
 
 const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('vi-VN')
 const fmtDate = (d) => {
@@ -184,35 +189,43 @@ export function exportPaymentPDF(req) {
   if (showItems && items.length) {
     const body = items.map((it, i) => {
       const unit = Number(it.price) || 0
-      const qty = Number(it.qty) || 0
-      return [String(i + 1), it.name || '', fmt(qty), it.unit || '', fmt(unit), fmt(lineTotal(it))]
+      return [String(i + 1), it.name || '', it.unit || '', fmt(unit), fmt(lineTotal(it))]
     })
-    body.push([
-      { content: 'TỔNG CỘNG', colSpan: 5, styles: { fontStyle: 'bold', halign: 'left' } },
-      { content: fmt(total), styles: { fontStyle: 'bold', halign: 'right' } },
-    ])
+    // Chỉ thêm dòng TỔNG CỘNG khi có nhiều hơn 1 mặt hàng
+    if (items.length > 1) {
+      body.push([
+        { content: 'TỔNG CỘNG', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right' } },
+        { content: fmt(total), styles: { fontStyle: 'bold', halign: 'right' } },
+      ])
+    }
     autoTable(doc, {
       startY: y,
-      head: [['STT', 'Tên mặt hàng', 'Số lượng', 'Đơn vị', 'Đơn giá\n(Đã có VAT)', 'Thành tiền\n(VNĐ)']],
+      head: [['STT', 'Tên mặt hàng', 'Đơn vị', 'Đơn giá\n(Đã có VAT)', 'Thành tiền\n(Đã có VAT)']],
       body,
       margin: { left: M, right: M },
       theme: 'grid',
       styles: { font: 'Roboto', fontSize: 11, cellPadding: 2.5, textColor: INK, lineColor: [180, 180, 180], lineWidth: 0.2, valign: 'middle' },
       headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: [245, 245, 245], textColor: INK, fontSize: 11, halign: 'center', valign: 'middle', lineColor: [140, 140, 140], lineWidth: 0.2 },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 12 },
+        0: { halign: 'center', cellWidth: 14 },
         1: { halign: 'left' },
-        2: { halign: 'center', cellWidth: 20 },
-        3: { halign: 'center', cellWidth: 18 },
-        4: { halign: 'right', cellWidth: 28 },
-        5: { halign: 'right', cellWidth: 30 },
+        2: { halign: 'center', cellWidth: 22 },
+        3: { halign: 'right', cellWidth: 34 },
+        4: { halign: 'right', cellWidth: 36 },
       },
     })
     y = doc.lastAutoTable.finalY + 8
   }
 
-  // Nội dung chính (markdown: **đậm**, *nghiêng*)
-  const mainText = (req.notes && req.notes.trim()) ? req.notes : ''
+  // Số tiền đề nghị thanh toán: ưu tiên req.amount (người dùng nhập), nếu không có thì lấy tổng đơn
+  const requestAmount = (req.amount != null && req.amount !== '') ? Number(req.amount) : total
+  const amountWords = docSoThanhChu(requestAmount).replace(/\.$/, '') + ' Việt Nam Đồng'
+
+  // Nội dung chính (markdown: **đậm**, *nghiêng*) — thay placeholder số tiền
+  let mainText = (req.notes && req.notes.trim()) ? req.notes : ''
+  mainText = mainText
+    .replace(/\{bằng_số\}/g, fmt(requestAmount))
+    .replace(/\{bằng_chữ\}/g, amountWords)
   if (mainText) {
     y = drawMdParagraph(doc, mainText, M, y, W - 2 * M, 6.5, 12.5, INK)
     y += 4
