@@ -307,7 +307,7 @@ export default function Contracts() {
 
       {loading ? <Spinner /> : rows.length === 0 ? (
         <EmptyState icon={FileSignature} title="Chưa có hợp đồng nào"
-          hint="Bấm \"Tạo hợp đồng\" để soạn hợp đồng theo mẫu."
+          hint="Bấm nút Tạo hợp đồng để soạn hợp đồng theo mẫu."
           action={<button className="btn-primary" onClick={openNew}><Plus size={16} /> Tạo hợp đồng</button>} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-paper-line bg-white">
