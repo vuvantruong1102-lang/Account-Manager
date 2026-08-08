@@ -23,15 +23,17 @@ const SIGNER = { name: 'Vũ Văn Cường', title: 'Giám đốc' }
 export const DEFAULT_PAYMENT_ORDER_DESC =
   'Căn cứ hợp đồng số {hd} giữa Công ty TNHH Thương mại dịch vụ và sản xuất VNF Việt Nam và {buyer}.'
 
-// Nội dung chính — {bằng_số} và {bằng_chữ} sẽ được thay bằng số tiền đề nghị
+// Nội dung chính — dòng "Bằng số"/"Bằng chữ" sẽ được điền khi nhập số tiền đề nghị
 export const DEFAULT_PAYMENT_NOTES =
   'Căn cứ điều khoản thanh toán của hợp đồng, chúng tôi kính đề nghị Quý công ty thanh toán số tiền:\n' +
-  'Bằng số: {bằng_số} VNĐ\n' +
-  'Bằng chữ: {bằng_chữ}\n' +
+  'Bằng số: \n' +
+  'Bằng chữ: \n' +
   'vào tài khoản của công ty chúng tôi:\n' +
   'Chủ tài khoản: Công ty TNHH thương mại dịch vụ và sản xuất VNF Việt Nam\n' +
   'Số tài khoản: 19135661522015\n' +
-  'Tại ngân hàng: Thương mại cổ phần Kỹ thương Việt Nam (Techcombank)'
+  'Tại ngân hàng: Thương mại cổ phần Kỹ thương Việt Nam (Techcombank)\n' +
+  '\n' +
+  'Xin chân thành cảm ơn sự hợp tác của Quý Công ty!'
 
 const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('vi-VN')
 const fmtDate = (d) => {
@@ -221,11 +223,18 @@ export function exportPaymentPDF(req) {
   const requestAmount = (req.amount != null && req.amount !== '') ? Number(req.amount) : total
   const amountWords = docSoThanhChu(requestAmount).replace(/\.$/, '') + ' Việt Nam Đồng'
 
-  // Nội dung chính (markdown: **đậm**, *nghiêng*) — thay placeholder số tiền
+  // Nội dung chính (markdown: **đậm**, *nghiêng*)
   let mainText = (req.notes && req.notes.trim()) ? req.notes : ''
+  // Thay placeholder nếu có
   mainText = mainText
     .replace(/\{bằng_số\}/g, fmt(requestAmount))
     .replace(/\{bằng_chữ\}/g, amountWords)
+  // Nếu dòng "Bằng số:" / "Bằng chữ:" còn trống, tự điền theo số tiền đề nghị
+  if (requestAmount > 0) {
+    mainText = mainText
+      .replace(/(Bằng số:)\s*(VNĐ)?\s*$/m, `$1 ${fmt(requestAmount)} VNĐ`)
+      .replace(/(Bằng chữ:)\s*$/m, `$1 ${amountWords}`)
+  }
   if (mainText) {
     y = drawMdParagraph(doc, mainText, M, y, W - 2 * M, 6.5, 12.5, INK)
     y += 4

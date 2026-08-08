@@ -18,6 +18,11 @@ export const DEFAULT_SELLER = {
 }
 
 const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('vi-VN')
+// Đơn giá: giữ tối đa 2 số thập phân (462.962,96); nếu là số nguyên thì không hiện phần thập phân
+const fmt2 = (n) => {
+  const v = Number(n) || 0
+  return v.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+}
 const dmy = (d) => {
   const dt = d ? new Date(d) : new Date()
   return { d: dt.getDate(), m: dt.getMonth() + 1, y: dt.getFullYear() }
@@ -147,7 +152,7 @@ export function exportContractPDF(data) {
     it.code || '',
     it.color || '',
     fmt(it.qty),
-    fmt(Math.round(Number(it.price) || 0)),
+    fmt2(Number(it.price) || 0),
     fmt(lineTotal(it)),
   ])
   const footRows = [
