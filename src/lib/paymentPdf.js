@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { TIMES_REGULAR, TIMES_BOLD, TIMES_ITALIC, TIMES_BOLDITALIC } from './timesFont'
+import { ROBOTO_REGULAR, ROBOTO_BOLD } from './robotoFont'
 import { YOKOOL_LOGO, YOKOOL_LOGO_RATIO } from './logoData'
 import { docSoThanhChu } from './numberToWords'
 
@@ -28,7 +28,7 @@ export const DEFAULT_PAYMENT_NOTES =
   'Tại ngân hàng: Thương mại cổ phần Kỹ thương Việt Nam (Techcombank)\n' +
   '(iii) Vui lòng thanh toán trong vòng năm (05) ngày kể từ ngày đề nghị thanh toán.'
 
-const fmt = (n) => (Number(n) || 0).toLocaleString('vi-VN')
+const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('vi-VN')
 const fmtDate = (d) => {
   const dt = d ? new Date(d) : new Date()
   return `Hà Nội, ngày ${String(dt.getDate()).padStart(2, '0')} tháng ${String(dt.getMonth() + 1).padStart(2, '0')} năm ${dt.getFullYear()}`
@@ -39,9 +39,9 @@ const imgFmt = (url) => (url && url.startsWith('data:image/png')) ? 'PNG' : 'JPE
 function italicText(doc, txt, x, y, opts) {
   const prev = doc.getFont()
   const bold = /bold/i.test(prev.fontStyle || '')
-  doc.setFont('Times', bold ? 'bolditalic' : 'italic')
+  doc.setFont('Roboto', bold ? 'bolditalic' : 'italic')
   doc.text(txt, x, y, opts)
-  doc.setFont('Times', prev.fontStyle || 'normal')
+  doc.setFont('Roboto', prev.fontStyle || 'normal')
 }
 
 // Tách 1 dòng markdown thành các đoạn {text, bold}. Hỗ trợ **đậm** và *nghiêng*.
@@ -72,7 +72,7 @@ function drawMdParagraph(doc, text, x, y, maxW, lh, fontSize, INK) {
     const tokens = parseMd(line)
     let cursorX = x + indent
     tokens.forEach((tk) => {
-      doc.setFont('Times', tk.bold ? 'bold' : 'normal')
+      doc.setFont('Roboto', tk.bold ? 'bold' : 'normal')
       const words = tk.text.split(/(\s+)/)
       words.forEach((w) => {
         if (w === '') return
@@ -89,15 +89,14 @@ function drawMdParagraph(doc, text, x, y, maxW, lh, fontSize, INK) {
 }
 
 function addFonts(doc) {
-  doc.addFileToVFS('Times-Regular.ttf', TIMES_REGULAR)
-  doc.addFont('Times-Regular.ttf', 'Times', 'normal')
-  doc.addFileToVFS('Times-Bold.ttf', TIMES_BOLD)
-  doc.addFont('Times-Bold.ttf', 'Times', 'bold')
-  doc.addFileToVFS('Times-Italic.ttf', TIMES_ITALIC)
-  doc.addFont('Times-Italic.ttf', 'Times', 'italic')
-  doc.addFileToVFS('Times-BoldItalic.ttf', TIMES_BOLDITALIC)
-  doc.addFont('Times-BoldItalic.ttf', 'Times', 'bolditalic')
-  doc.setFont('Times', 'normal')
+  doc.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR)
+  doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal')
+  doc.addFileToVFS('Roboto-Bold.ttf', ROBOTO_BOLD)
+  doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold')
+  // Roboto chỉ có normal + bold; map italic/bolditalic về normal/bold để không lỗi
+  doc.addFont('Roboto-Regular.ttf', 'Roboto', 'italic')
+  doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bolditalic')
+  doc.setFont('Roboto', 'normal')
 }
 
 function drawHeader(doc, W, M) {
@@ -105,20 +104,20 @@ function drawHeader(doc, W, M) {
   const titleH = 6.5
   const titleLogoW = titleH * YOKOOL_LOGO_RATIO
   try { doc.addImage(YOKOOL_LOGO, 'PNG', M, y - titleH + 1.8, titleLogoW, titleH) } catch (e) {}
-  doc.setFont('Times', 'bold').setFontSize(13.8).setTextColor(...INK)
+  doc.setFont('Roboto', 'bold').setFontSize(13.8).setTextColor(...INK)
   doc.text(' B2B', M + titleLogoW, y)
-  doc.setFont('Times', 'normal').setFontSize(9.5).setTextColor(...SOFT)
+  doc.setFont('Roboto', 'normal').setFontSize(9.5).setTextColor(...SOFT)
   doc.text('Premium Tech gifts for Business', M, y + 6)
 
   let ry = y
-  doc.setFont('Times', 'bold').setFontSize(9).setTextColor(...INK)
+  doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
   const blockLeft = W - M - W * 0.52
   const nameLines = doc.splitTextToSize(SELLER.name, W - M - blockLeft)
   nameLines.forEach((ln) => { doc.text(ln, W - M, ry, { align: 'right' }); ry += 4.2 })
   ry += 1
   const nameWidth = Math.max(...nameLines.map((ln) => doc.getTextWidth(ln)))
   const infoLeft = (W - M) - nameWidth
-  doc.setFont('Times', 'normal').setFontSize(8).setTextColor(...SOFT)
+  doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT)
   doc.text(`Địa chỉ: ${SELLER.address}`, infoLeft, ry); ry += 4
   doc.text(SELLER.office, infoLeft, ry); ry += 4
   doc.text(`Mã số thuế: ${SELLER.taxCode}`, infoLeft, ry); ry += 4
@@ -139,27 +138,27 @@ export function exportPaymentPDF(req) {
 
   // Ngày tháng (in nghiêng, phải)
   y += 6
-  doc.setFont('Times', 'normal').setFontSize(11.5).setTextColor(...INK)
+  doc.setFont('Roboto', 'normal').setFontSize(11.5).setTextColor(...INK)
   italicText(doc, fmtDate(req.created_at), W - M, y, { align: 'right' })
 
   // Tiêu đề
   y += 10
-  doc.setFont('Times', 'bold').setFontSize(18).setTextColor(...INK)
+  doc.setFont('Roboto', 'bold').setFontSize(18).setTextColor(...INK)
   doc.text('GIẤY ĐỀ NGHỊ THANH TOÁN', W / 2, y, { align: 'center' })
   y += 6.5
-  doc.setFont('Times', 'bold').setFontSize(12.5)
+  doc.setFont('Roboto', 'bold').setFontSize(12.5)
   doc.text(`Số ${req.doc_number || 'DN03'}`, W / 2, y, { align: 'center' })
 
   // Kính gửi (khách hàng) — đặt TRÊN dòng "Căn cứ...", cách tiêu đề 2 hàng
   y += 21
-  doc.setFont('Times', 'normal').setFontSize(12.5).setTextColor(...INK)
+  doc.setFont('Roboto', 'normal').setFontSize(12.5).setTextColor(...INK)
   const labelX = M
   const valX = M + 24
   doc.text('Kính gửi:', labelX, y)
-  doc.setFont('Times', 'bold')
+  doc.setFont('Roboto', 'bold')
   const cname = (req.company_name || '').toUpperCase()
   doc.splitTextToSize(cname, W - M - valX).forEach((ln) => { doc.text(ln, valX, y); y += 6 })
-  doc.setFont('Times', 'normal')
+  doc.setFont('Roboto', 'normal')
   if (req.address) {
     doc.text('Địa chỉ:', labelX, y)
     doc.splitTextToSize(req.address, W - M - valX).forEach((ln) => { doc.text(ln, valX, y); y += 6 })
@@ -179,13 +178,14 @@ export function exportPaymentPDF(req) {
   // Bảng mặt hàng (có thể ẩn)
   const showItems = req.show_items !== false
   const items = req.items || []
-  const total = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0)
+  const lineTotal = (it) => Math.round((Number(it.qty) || 0) * (Number(it.price) || 0))
+  const total = items.reduce((s, it) => s + lineTotal(it), 0)
 
   if (showItems && items.length) {
     const body = items.map((it, i) => {
       const unit = Number(it.price) || 0
       const qty = Number(it.qty) || 0
-      return [String(i + 1), it.name || '', fmt(qty), it.unit || '', fmt(unit), fmt(qty * unit)]
+      return [String(i + 1), it.name || '', fmt(qty), it.unit || '', fmt(unit), fmt(lineTotal(it))]
     })
     body.push([
       { content: 'TỔNG CỘNG', colSpan: 5, styles: { fontStyle: 'bold', halign: 'left' } },
@@ -197,8 +197,8 @@ export function exportPaymentPDF(req) {
       body,
       margin: { left: M, right: M },
       theme: 'grid',
-      styles: { font: 'Times', fontSize: 11, cellPadding: 2.5, textColor: INK, lineColor: [180, 180, 180], lineWidth: 0.2, valign: 'middle' },
-      headStyles: { font: 'Times', fontStyle: 'bold', fillColor: [245, 245, 245], textColor: INK, fontSize: 11, halign: 'center', valign: 'middle', lineColor: [140, 140, 140], lineWidth: 0.2 },
+      styles: { font: 'Roboto', fontSize: 11, cellPadding: 2.5, textColor: INK, lineColor: [180, 180, 180], lineWidth: 0.2, valign: 'middle' },
+      headStyles: { font: 'Roboto', fontStyle: 'bold', fillColor: [245, 245, 245], textColor: INK, fontSize: 11, halign: 'center', valign: 'middle', lineColor: [140, 140, 140], lineWidth: 0.2 },
       columnStyles: {
         0: { halign: 'center', cellWidth: 12 },
         1: { halign: 'left' },
@@ -222,13 +222,13 @@ export function exportPaymentPDF(req) {
   y += 12
   if (y > H - 45) { doc.addPage(); y = 30 }
   const sigX = W - M - 32   // tâm cụm chữ ký nằm về bên phải
-  doc.setFont('Times', 'normal').setFontSize(12).setTextColor(...INK)
+  doc.setFont('Roboto', 'normal').setFontSize(12).setTextColor(...INK)
   doc.text('Trân trọng,', sigX, y, { align: 'center' })
   y += 10
-  doc.setFont('Times', 'normal')
+  doc.setFont('Roboto', 'normal')
   doc.text(SIGNER.title, sigX, y, { align: 'center' })
   y += 18
-  doc.setFont('Times', 'bold')
+  doc.setFont('Roboto', 'bold')
   doc.text(SIGNER.name, sigX, y, { align: 'center' })
 
   const fileName = `DNTT_VNF_${req.doc_number || 'DN03'}.pdf`

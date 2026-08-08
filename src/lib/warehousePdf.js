@@ -14,7 +14,7 @@ const SELLER = {
 }
 const SIGNER = { name: 'Vũ Văn Cường', title: 'Giám Đốc' }
 
-const fmt = (n) => (Number(n) || 0).toLocaleString('vi-VN')
+const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('vi-VN')
 const dmy = (d) => {
   const dt = d ? new Date(d) : new Date()
   return { d: dt.getDate(), m: dt.getMonth() + 1, y: dt.getFullYear() }
@@ -74,12 +74,13 @@ export function exportWarehousePDF(data) {
   const items = data.items || []
   const useVat = !!data.use_vat
   const vatRate = Number(data.vat_percent) || 0
+  const lineTotal = (it) => Math.round((Number(it.qty) || 0) * (Number(it.price) || 0))
   const body = items.map((it, i) => {
     const price = Number(it.price) || 0
     const qty = Number(it.qty) || 0
-    return [String(i + 1), it.code || '', it.name || '', it.unit || '', fmt(qty), fmt(price), fmt(qty * price)]
+    return [String(i + 1), it.code || '', it.name || '', it.unit || '', fmt(qty), fmt(price), fmt(lineTotal(it))]
   })
-  const sub = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0)
+  const sub = items.reduce((s, it) => s + lineTotal(it), 0)
   const vat = useVat ? Math.round(sub * vatRate / 100) : 0
   const total = sub + vat
 
@@ -177,14 +178,14 @@ export function exportDeliveryPDF(data) {
     const lblW = 42
     doc.text(label, M, y)
     doc.setFont('Roboto', bold ? 'bold' : 'normal')
-    doc.splitTextToSize(String(val || ''), W - M - (M + lblW)).forEach((ln, i) => { if (i > 0) y += 5; doc.text(ln, M + lblW, y) })
+    doc.splitTextToSize(String(val || ''), W - M - (M + lblW)).forEach((ln, i) => { doc.text(ln, M + lblW, y); if (i < 100 && i > 0) y += 5 })
     y += 5
   }
 
   // Bên A (VNF - cố định)
   doc.setFont('Roboto', 'bold').setFontSize(10)
   doc.text('Bên bán hàng (Bên A):', M, y)
-  doc.splitTextToSize(SELLER.name, W - M - (M + 42)).forEach((ln, i) => { if (i > 0) y += 5; doc.text(ln, M + 42, y) }); y += 5
+  doc.splitTextToSize(SELLER.name, W - M - (M + 42)).forEach((ln, i) => { doc.text(ln, M + 42, y); if (i > 0) y += 5 }); y += 5
   line('Địa chỉ:', SELLER.address)
   line('Mã số thuế:', SELLER.taxCode)
   line('Số tài khoản:', SELLER.bank)
@@ -194,7 +195,7 @@ export function exportDeliveryPDF(data) {
   // Bên B (khách - nhập)
   doc.setFont('Roboto', 'bold').setFontSize(10)
   doc.text('Bên mua hàng (Bên B):', M, y)
-  doc.splitTextToSize((data.company_name || '').toUpperCase(), W - M - (M + 42)).forEach((ln, i) => { if (i > 0) y += 5; doc.text(ln, M + 42, y) }); y += 5
+  doc.splitTextToSize((data.company_name || '').toUpperCase(), W - M - (M + 42)).forEach((ln, i) => { doc.text(ln, M + 42, y); if (i > 0) y += 5 }); y += 5
   line('Địa chỉ:', data.address || '……………………………………')
   line('Mã số thuế:', data.tax_code || '……………………')
   line('Đại diện:', `${data.rep_name || '………………………………'}          Chức vụ: ${data.rep_title || '……………'}`)
@@ -252,7 +253,6 @@ export function exportDeliveryPDF(data) {
   y += 22
   doc.setFont('Roboto', 'bold').setFontSize(10).setTextColor(...INK)
   doc.text(SIGNER.name.toUpperCase(), cA, y, { align: 'center' })
-  if (data.rep_name) doc.text(String(data.rep_name).replace(/^\s*(Ông|Bà|Anh|Chị|Ms\.?|Mr\.?)\s+/i, '').toUpperCase(), cB, y, { align: 'center' })
 
   doc.save(`BienBanBanGiao_${data.doc_number || 'BBBG'}.pdf`)
 }
