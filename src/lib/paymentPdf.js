@@ -153,16 +153,17 @@ export function exportPaymentPDF(req) {
   doc.setFont('Roboto', 'bold').setFontSize(18).setTextColor(...INK)
   doc.text('GIẤY ĐỀ NGHỊ THANH TOÁN', W / 2, y, { align: 'center' })
   y += 6.5
-  doc.setFont('Roboto', 'bold').setFontSize(12.5)
+  doc.setFont('Roboto', 'bold').setFontSize(12.5).setTextColor(...BRAND)
   doc.text(`Số ${req.doc_number || 'DN03'}`, W / 2, y, { align: 'center' })
+  doc.setTextColor(...INK)
 
-  // Kính gửi (khách hàng) — đặt TRÊN dòng "Căn cứ...", cách tiêu đề 2 hàng
-  y += 21
+  // Kính gửi (khách hàng)
+  y += 16
   doc.setFont('Roboto', 'normal').setFontSize(12.5).setTextColor(...INK)
   const labelX = M
   const valX = M + 24
-  doc.text('Kính gửi:', labelX, y)
   doc.setFont('Roboto', 'bold')
+  doc.text('Kính gửi:', labelX, y)
   const cname = (req.company_name || '').toUpperCase()
   doc.splitTextToSize(cname, W - M - valX).forEach((ln) => { doc.text(ln, valX, y); y += 6 })
   doc.setFont('Roboto', 'normal')
@@ -182,16 +183,22 @@ export function exportPaymentPDF(req) {
     y += 4
   }
 
-  // Bảng mặt hàng (có thể ẩn)
+  // Bảng mặt hàng (có thể ẩn) — hiển thị ĐƠN GIÁ và THÀNH TIỀN đã bao gồm VAT, làm tròn
   const showItems = req.show_items !== false
   const items = req.items || []
-  const lineTotal = (it) => Math.round((Number(it.qty) || 0) * (Number(it.price) || 0))
-  const total = items.reduce((s, it) => s + lineTotal(it), 0)
+  const rate = req.use_vat !== false ? (Number(req.vat_percent) || 0) : 0
+  const vatMul = 1 + rate / 100
+  const roundTiny = (n) => {
+    const near1000 = Math.round(n / 1000) * 1000
+    return Math.abs(n - near1000) <= 2 ? near1000 : Math.round(n)
+  }
+  const unitVat = (it) => Math.round((Number(it.price) || 0) * vatMul)          // đơn giá có VAT (tròn)
+  const lineVat = (it) => roundTiny((Number(it.qty) || 0) * (Number(it.price) || 0) * vatMul) // thành tiền có VAT (tròn)
+  const total = items.reduce((s, it) => s + lineVat(it), 0)
 
   if (showItems && items.length) {
     const body = items.map((it, i) => {
-      const unit = Number(it.price) || 0
-      return [String(i + 1), it.name || '', it.unit || '', fmt(unit), fmt(lineTotal(it))]
+      return [String(i + 1), it.name || '', it.unit || '', fmt(unitVat(it)), fmt(lineVat(it))]
     })
     // Chỉ thêm dòng TỔNG CỘNG khi có nhiều hơn 1 mặt hàng
     if (items.length > 1) {
@@ -223,22 +230,58 @@ export function exportPaymentPDF(req) {
   const requestAmount = (req.amount != null && req.amount !== '') ? Number(req.amount) : total
   const amountWords = docSoThanhChu(requestAmount).replace(/\.$/, '') + ' Việt Nam Đồng'
 
-  // Nội dung chính (markdown: **đậm**, *nghiêng*)
-  let mainText = (req.notes && req.notes.trim()) ? req.notes : ''
-  // Thay placeholder nếu có
-  mainText = mainText
+  // ----- Nội dung chính: trình bày có cấu trúc, đẹp & chuyên nghiệp -----
+  // Tách notes thành các dòng để nhận biết phần số tiền / tài khoản
+  let notesRaw = (req.notes && req.notes.trim()) ? req.notes : ''
+  notesRaw = notesRaw
     .replace(/\{bằng_số\}/g, fmt(requestAmount))
     .replace(/\{bằng_chữ\}/g, amountWords)
-  // Nếu dòng "Bằng số:" / "Bằng chữ:" còn trống, tự điền theo số tiền đề nghị
-  if (requestAmount > 0) {
-    mainText = mainText
-      .replace(/(Bằng số:)\s*(VNĐ)?\s*$/m, `$1 ${fmt(requestAmount)} VNĐ`)
-      .replace(/(Bằng chữ:)\s*$/m, `$1 ${amountWords}`)
-  }
-  if (mainText) {
-    y = drawMdParagraph(doc, mainText, M, y, W - 2 * M, 6.5, 12.5, INK)
-    y += 4
-  }
+
+  const lines = notesRaw.split('\n')
+  const isSoLine = (l) => /^Bằng số:/i.test(l.trim())
+  const isChuLine = (l) => /^Bằng chữ:/i.test(l.trim())
+  const isAcctLine = (l) => /^(Chủ tài khoản|Số tài khoản|Tại ngân hàng):/i.test(l.trim())
+
+  const lh = 6.4
+  const contentW = W - 2 * M
+  lines.forEach((raw) => {
+    const l = raw.replace(/\r/g, '')
+    if (l.trim() === '') { y += 3; return }
+
+    if (isSoLine(l) || isChuLine(l)) {
+      // Dòng số tiền: in đậm, hơi lớn hơn, thụt vào
+      const label = isSoLine(l) ? 'Bằng số:' : 'Bằng chữ:'
+      let val = l.replace(/^Bằng (số|chữ):\s*/i, '').trim()
+      if (!val) val = isSoLine(l) ? `${fmt(requestAmount)} VNĐ` : amountWords
+      if (isSoLine(l) && !/VNĐ|VND/i.test(val)) val += ' VNĐ'
+      if (y > H - 40) { doc.addPage(); y = 25 }
+      doc.setFont('Roboto', 'bold').setFontSize(12.5).setTextColor(...INK)
+      doc.text(label, M + 4, y)
+      doc.setFont('Roboto', 'bold').setFontSize(12.5).setTextColor(...BRAND)
+      doc.splitTextToSize(val, contentW - 32).forEach((ln, i) => { doc.text(ln, M + 32, y); if (i > 0) y += lh })
+      doc.setTextColor(...INK)
+      y += lh + 0.5
+      return
+    }
+
+    // Dòng thường (kể cả tài khoản) — tài khoản để đậm nhãn
+    if (y > H - 40) { doc.addPage(); y = 25 }
+    if (isAcctLine(l)) {
+      const idx = l.indexOf(':')
+      const label = l.slice(0, idx + 1)
+      const val = l.slice(idx + 1).trim()
+      doc.setFont('Roboto', 'bold').setFontSize(12).setTextColor(...INK)
+      doc.text(label, M + 4, y)
+      const lblW = doc.getTextWidth(label + ' ')
+      doc.setFont('Roboto', 'normal')
+      doc.splitTextToSize(val, contentW - 8 - lblW).forEach((ln, i) => { doc.text(ln, M + 4 + lblW, y); if (i > 0) y += lh })
+      y += lh
+    } else {
+      doc.setFont('Roboto', 'normal').setFontSize(12).setTextColor(...INK)
+      doc.splitTextToSize(l, contentW).forEach((ln) => { doc.text(ln, M, y); y += lh })
+    }
+  })
+  y += 4
 
   // Trân trọng + chữ ký — căn phải
   y += 12

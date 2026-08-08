@@ -142,8 +142,17 @@ export function exportContractPDF(data) {
   const useVat = data.use_vat !== false
   const lineTotal = (it) => Math.round((Number(it.qty) || 0) * (Number(it.price) || 0))
   const sub = items.reduce((s, it) => s + lineTotal(it), 0)
-  const vat = useVat ? Math.round(sub * vatRate / 100) : 0
-  const grand = sub + vat
+  // VAT & tổng tính từ giá trị chính xác rồi khử sai số làm tròn nhỏ (<=2đ) do đơn giá chia ngược
+  const roundTiny = (n) => {
+    const r = Math.round(n)
+    const near1000 = Math.round(n / 1000) * 1000
+    // Nếu rất gần bội số 1000 (chênh <=2đ) thì lấy bội số 1000 cho "đẹp"
+    if (Math.abs(n - near1000) <= 2) return near1000
+    return r
+  }
+  const vatExact = useVat ? sub * vatRate / 100 : 0
+  const grand = roundTiny(sub + vatExact)
+  const vat = grand - sub
 
   const body = items.map((it, i) => [
     String(i + 1),
