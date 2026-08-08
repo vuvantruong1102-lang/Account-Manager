@@ -20,7 +20,7 @@ function buyerCode(name) {
   const tokens = cleaned.split(/\s+/).filter(Boolean)
   const withNum = tokens.filter((t) => /\d/.test(t))
   const base = (withNum.length ? withNum : tokens.slice(-2)).join('')
-  return base.replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'KH'
+  return base.replace(/[^A-Z0-9.]/g, '').slice(0, 10) || 'KH'
 }
 
 const EMPTY = {
@@ -110,7 +110,7 @@ export default function Contracts() {
     const year = new Date().getFullYear()
     const { seq } = await genSeq('seq')
     base.seq = seq
-    base.contract_number = `${String(seq).padStart(3, '0')}/${year}/HĐMB/VNF-KH`
+    base.contract_number = `${String(seq).padStart(3, '0')}/${year}/KH-VNF`
     const pay = await genSeq('payment_seq')
     base.payment_seq = pay.seq
     base.payment_number = `${String(pay.seq).padStart(3, '0')}/${year}/VNF-DNTT`
@@ -143,7 +143,7 @@ export default function Contracts() {
       const buyer = { ...f.buyer, name, address: c?.address || f.buyer.address, tax_code: c?.tax_code || f.buyer.tax_code, rep_name: c?.contact_person || f.buyer.rep_name }
       const year = f.year || new Date().getFullYear()
       const seqStr = f.seq ? String(f.seq).padStart(3, '0') : '001'
-      return { ...f, buyer, contract_number: `${seqStr}/${year}/HĐMB/VNF-${buyerCode(name)}` }
+      return { ...f, buyer, contract_number: `${seqStr}/${year}/${buyerCode(name)}-VNF` }
     })
   }
 
@@ -359,8 +359,8 @@ export default function Contracts() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="label-field">Số hợp đồng</label>
-                <input className="input-field" value={form.contract_number} onChange={set('contract_number')} />
-                <p className="mt-1 text-[11px] text-ink-faint">Tự sinh theo năm; có thể sửa tay.</p>
+                <input className="input-field" value={form.contract_number} onChange={set('contract_number')} placeholder="001/2026/DT5.1-VNF" />
+                <p className="mt-1 text-[11px] text-ink-faint">Cú pháp: 001/2026/[mã KH]-VNF — tự sinh, có thể sửa tay.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label-field">Nơi ký</label><input className="input-field" value={form.sign_place} onChange={set('sign_place')} /></div>
