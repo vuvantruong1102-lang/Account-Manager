@@ -295,6 +295,8 @@ export default function Contracts() {
       address: saved.buyer?.address || '',
       tax_code: saved.buyer?.tax_code || '',
       items: saved.items || [],
+      use_vat: saved.use_vat !== false,
+      vat_percent: Number(saved.vat_percent) || 0,
       amount: (saved.payment_amount != null && saved.payment_amount !== '') ? Number(saved.payment_amount) : null,
       order_desc: orderDesc,
       notes: saved.payment_notes || DEFAULT_PAYMENT_NOTES,
