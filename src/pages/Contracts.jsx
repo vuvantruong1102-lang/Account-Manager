@@ -7,7 +7,7 @@ import { docSoThanhChu } from '../lib/numberToWords'
 import { Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
 import { exportContractPDF, DEFAULT_SELLER } from '../lib/contractPdf'
 import { exportWarehousePDF, exportDeliveryPDF } from '../lib/warehousePdf'
-import { exportPaymentPDF, DEFAULT_PAYMENT_NOTES } from '../lib/paymentPdf'
+import { exportPaymentPDF, DEFAULT_PAYMENT_NOTES, DEFAULT_PAYMENT_ORDER_DESC } from '../lib/paymentPdf'
 
 const newLine = () => ({ code: '', name: '', unit: 'Cái', color: 'Đen', qty: 1, price: 0 })
 const newSection = () => ({ title: '', bullets: [''], text: '', image: '', caption: '' })
@@ -55,8 +55,9 @@ const EMPTY = {
   payment_number: '',
   payment_seq: null,
   payment_date: '',
-  payment_order_desc: '',
+  payment_order_desc: DEFAULT_PAYMENT_ORDER_DESC,
   payment_notes: DEFAULT_PAYMENT_NOTES,
+  payment_amount: '',
   payment_show_items: true,
 }
 
@@ -107,13 +108,14 @@ export default function Contracts() {
   const openNew = async () => {
     const base = JSON.parse(JSON.stringify(EMPTY))
     base.payment_notes = DEFAULT_PAYMENT_NOTES
+    base.payment_order_desc = DEFAULT_PAYMENT_ORDER_DESC
     const year = new Date().getFullYear()
     const { seq } = await genSeq('seq')
     base.seq = seq
     base.contract_number = `${String(seq).padStart(3, '0')}/${year}/KH-VNF`
     const pay = await genSeq('payment_seq')
     base.payment_seq = pay.seq
-    base.payment_number = `${String(pay.seq).padStart(3, '0')}/${year}/VNF-DNTT`
+    base.payment_number = `${String(pay.seq).padStart(3, '0')}/${year}/HĐMB/VNF-KH`
     setForm(base); setEditId(null); setTab('contract'); setOpen(true)
   }
 
@@ -126,6 +128,8 @@ export default function Contracts() {
     f.quality_terms_text = Array.isArray(r.quality_terms) ? r.quality_terms.join('\n') : (r.quality_terms_text || EMPTY.quality_terms_text)
     f.appendix_sections = (r.appendix_sections?.length ? r.appendix_sections : EMPTY.appendix_sections)
     f.payment_notes = r.payment_notes || DEFAULT_PAYMENT_NOTES
+    f.payment_order_desc = r.payment_order_desc || DEFAULT_PAYMENT_ORDER_DESC
+    f.payment_amount = r.payment_amount != null ? r.payment_amount : ''
     setForm(f); setEditId(r.id); setTab('contract'); setOpen(true)
   }
 
@@ -142,8 +146,14 @@ export default function Contracts() {
     setForm((f) => {
       const buyer = { ...f.buyer, name, address: c?.address || f.buyer.address, tax_code: c?.tax_code || f.buyer.tax_code, rep_name: c?.contact_person || f.buyer.rep_name }
       const year = f.year || new Date().getFullYear()
+      const code = buyerCode(name)
       const seqStr = f.seq ? String(f.seq).padStart(3, '0') : '001'
-      return { ...f, buyer, contract_number: `${seqStr}/${year}/${buyerCode(name)}-VNF` }
+      const payStr = f.payment_seq ? String(f.payment_seq).padStart(3, '0') : '001'
+      return {
+        ...f, buyer,
+        contract_number: `${seqStr}/${year}/${code}-VNF`,
+        payment_number: `${payStr}/${year}/HĐMB/VNF-${code}`,
+      }
     })
   }
 
@@ -218,6 +228,7 @@ export default function Contracts() {
       payment_date: form.payment_date || null,
       payment_order_desc: form.payment_order_desc || null,
       payment_notes: form.payment_notes || null,
+      payment_amount: (form.payment_amount != null && form.payment_amount !== '') ? Number(form.payment_amount) : null,
     }
     const runSave = async (pl) => {
       if (editId) {
@@ -259,17 +270,25 @@ export default function Contracts() {
     items: saved.items || [],
   })
 
-  const toPaymentData = (saved) => ({
-    doc_number: saved.payment_number || saved.contract_number,
-    created_at: saved.payment_date || saved.created_at || new Date().toISOString(),
-    company_name: saved.buyer?.name || '',
-    address: saved.buyer?.address || '',
-    tax_code: saved.buyer?.tax_code || '',
-    items: saved.items || [],
-    order_desc: saved.payment_order_desc || `Thanh toán theo Hợp đồng số ${saved.contract_number || ''}`.trim(),
-    notes: saved.payment_notes || DEFAULT_PAYMENT_NOTES,
-    show_items: saved.payment_show_items !== false,
-  })
+  const toPaymentData = (saved) => {
+    const hd = saved.contract_number || ''
+    const buyerName = saved.buyer?.name || ''
+    const orderDesc = (saved.payment_order_desc || DEFAULT_PAYMENT_ORDER_DESC)
+      .replace(/\{hd\}/g, hd)
+      .replace(/\{buyer\}/g, buyerName)
+    return {
+      doc_number: saved.payment_number || saved.contract_number,
+      created_at: saved.payment_date || saved.created_at || new Date().toISOString(),
+      company_name: buyerName,
+      address: saved.buyer?.address || '',
+      tax_code: saved.buyer?.tax_code || '',
+      items: saved.items || [],
+      amount: (saved.payment_amount != null && saved.payment_amount !== '') ? Number(saved.payment_amount) : null,
+      order_desc: orderDesc,
+      notes: saved.payment_notes || DEFAULT_PAYMENT_NOTES,
+      show_items: saved.payment_show_items !== false,
+    }
+  }
 
   const saveAndExport = async (kind) => {
     const saved = await persist()
@@ -550,8 +569,8 @@ export default function Contracts() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="label-field">Số đề nghị thanh toán</label>
-                <input className="input-field" value={form.payment_number} onChange={set('payment_number')} placeholder="001/2026/VNF-DNTT" />
-                <p className="mt-1 text-[11px] text-ink-faint">Tự sinh theo năm; có thể sửa tay.</p>
+                <input className="input-field" value={form.payment_number} onChange={set('payment_number')} placeholder="001/2026/HĐMB/VNF-DT51" />
+                <p className="mt-1 text-[11px] text-ink-faint">Cú pháp: 001/2026/HĐMB/VNF-[mã KH] — tự sinh, có thể sửa.</p>
               </div>
               <div>
                 <label className="label-field">Ngày đề nghị thanh toán</label>
@@ -560,29 +579,41 @@ export default function Contracts() {
             </div>
 
             <div>
+              <label className="label-field">Số tiền đề nghị thanh toán (VNĐ)</label>
+              <input type="number" className="input-field" value={form.payment_amount} onChange={set('payment_amount')} placeholder={`Để trống = dùng tổng đơn (${formatVND(grand)})`} />
+              <p className="mt-1 text-[11px] text-ink-faint">
+                Số tiền này thay vào {'{bằng_số}'} và {'{bằng_chữ}'} trong nội dung.
+                {form.payment_amount !== '' && form.payment_amount != null
+                  ? ` Bằng chữ: ${docSoThanhChu(Number(form.payment_amount) || 0).replace(/\.$/, '')} Việt Nam Đồng.`
+                  : ''}
+              </p>
+            </div>
+
+            <div>
               <label className="label-field">Nội dung / lý do đề nghị thanh toán</label>
-              <input className="input-field" value={form.payment_order_desc} onChange={set('payment_order_desc')} placeholder={`Thanh toán theo Hợp đồng số ${form.contract_number || '…'}`} />
-              <p className="mt-1 text-[11px] text-ink-faint">Để trống = tự điền theo số hợp đồng.</p>
+              <textarea className="input-field h-20 text-sm" value={form.payment_order_desc} onChange={set('payment_order_desc')} placeholder="Căn cứ hợp đồng số {hd} giữa..." />
+              <p className="mt-1 text-[11px] text-ink-faint">Dùng {'{hd}'} = số hợp đồng, {'{buyer}'} = tên khách hàng — sẽ tự thay khi xuất.</p>
             </div>
 
             <div className="flex items-center gap-2">
               <input id="pm-items" type="checkbox" checked={form.payment_show_items !== false} onChange={setChk('payment_show_items')} className="h-4 w-4" />
-              <label htmlFor="pm-items" className="text-sm text-ink">Hiển thị bảng chi tiết hàng hóa trong phiếu đề nghị thanh toán</label>
+              <label htmlFor="pm-items" className="text-sm text-ink">Hiển thị bảng chi tiết hàng hóa (STT, tên hàng, đơn vị, đơn giá có VAT, thành tiền có VAT)</label>
             </div>
 
             <div>
               <div className="mb-1.5 flex items-center justify-between">
-                <label className="label-field mb-0">Lưu ý / căn cứ <span className="text-ink-faint">(theo mẫu cũ — có thể sửa tự do)</span></label>
+                <label className="label-field mb-0">Nội dung chính <span className="text-ink-faint">(có thể sửa tự do)</span></label>
                 <button type="button" onClick={() => setForm((f) => ({ ...f, payment_notes: DEFAULT_PAYMENT_NOTES }))} className="text-xs font-semibold text-brand hover:underline">↺ Khôi phục mẫu mặc định</button>
               </div>
               <textarea className="input-field h-52 font-mono text-xs leading-relaxed" value={form.payment_notes} onChange={set('payment_notes')} />
+              <p className="mt-1 text-[11px] text-ink-faint">{'{bằng_số}'} và {'{bằng_chữ}'} sẽ tự thay bằng số tiền đề nghị ở trên.</p>
             </div>
 
             <div className="flex items-center justify-between rounded-xl border border-paper-line bg-paper/40 p-4">
               <div>
-                <p className="text-sm text-ink-soft">Tổng giá trị đề nghị thanh toán</p>
-                <p className="text-xl font-bold text-ink">{formatVND(grand)}</p>
-                <p className="text-xs italic text-ink-faint">{docSoThanhChu(grand).replace(/\.$/, '')} Việt Nam Đồng</p>
+                <p className="text-sm text-ink-soft">Số tiền sẽ in trên phiếu</p>
+                <p className="text-xl font-bold text-ink">{formatVND((form.payment_amount !== '' && form.payment_amount != null) ? Number(form.payment_amount) : grand)}</p>
+                <p className="text-xs italic text-ink-faint">{docSoThanhChu((form.payment_amount !== '' && form.payment_amount != null) ? Number(form.payment_amount) : grand).replace(/\.$/, '')} Việt Nam Đồng</p>
               </div>
               <button type="button" className="btn-primary disabled:opacity-50" disabled={saving} onClick={() => saveAndExport('payment')}>
                 <FileText size={16} className="mr-1.5 inline" />{saving ? 'Đang lưu…' : 'Tạo Đề nghị thanh toán'}
