@@ -226,15 +226,15 @@ export function exportContractPDF(data) {
   /* ---------- ĐIỀU 2 ---------- */
   need(16)
   para('ĐIỀU 2. THANH TOÁN', { bold: true, gap: 2 })
-  para(`2.1. Tổng giá trị thanh toán là ${fmt(grand)} đồng (Bằng chữ: ${docSoThanhChu(grand).replace(/\.$/, '')} đồng), đã bao gồm thuế GTGT ${useVat ? vatRate : 0}%.`, { gap: 2, lh: 4.8 })
+  para(`2.1. Tổng giá trị thanh toán là ${fmt(grand)} đồng (Bằng chữ: ${docSoThanhChu(grand).replace(/\.$/, '')}), đã bao gồm thuế GTGT ${useVat ? vatRate : 0}%.`, { gap: 2, lh: 4.8 })
 
   para('2.2. Bên A thanh toán thành 02 lần:', { gap: 1 })
   const pct1 = Number(data.advance_percent ?? 70)
   const pct2 = 100 - pct1
   const amt1 = Math.round(grand * pct1 / 100)
   const amt2 = grand - amt1
-  para(`a) Lần 1: Thanh toán ${pct1}% giá trị Hợp đồng, tương ứng ${fmt(amt1)} đồng (Bằng chữ: ${docSoThanhChu(amt1).replace(/\.$/, '')} đồng) trong vòng 02 ngày làm việc kể từ ngày Hợp đồng được ký và Bên A nhận được đề nghị thanh toán hợp lệ. Bên B triển khai sản xuất sau khi nhận đủ khoản này và mẫu cuối cùng đã được Bên A xác nhận.`, { gap: 1.5, lh: 4.8, indent: 4 })
-  para(`b) Lần 2: Thanh toán ${pct2}% giá trị Hợp đồng còn lại, tương ứng ${fmt(amt2)} đồng (Bằng chữ: ${docSoThanhChu(amt2).replace(/\.$/, '')} đồng) trong vòng 05 ngày làm việc kể từ ngày Bên B giao đủ hàng và cung cấp Biên bản giao nhận, Đề nghị thanh toán và hóa đơn GTGT hợp lệ.`, { gap: 2, lh: 4.8, indent: 4 })
+  para(`a) Lần 1: Thanh toán ${pct1}% giá trị Hợp đồng, tương ứng ${fmt(amt1)} đồng (Bằng chữ: ${docSoThanhChu(amt1).replace(/\.$/, '')}) trong vòng 02 ngày làm việc kể từ ngày Hợp đồng được ký và Bên A nhận được đề nghị thanh toán hợp lệ. Bên B triển khai sản xuất sau khi nhận đủ khoản này và mẫu cuối cùng đã được Bên A xác nhận.`, { gap: 1.5, lh: 4.8, indent: 4 })
+  para(`b) Lần 2: Thanh toán ${pct2}% giá trị Hợp đồng còn lại, tương ứng ${fmt(amt2)} đồng (Bằng chữ: ${docSoThanhChu(amt2).replace(/\.$/, '')}) trong vòng 05 ngày làm việc kể từ ngày Bên B giao đủ hàng và cung cấp Biên bản giao nhận, Đề nghị thanh toán và hóa đơn GTGT hợp lệ.`, { gap: 2, lh: 4.8, indent: 4 })
 
   para('2.3. Thanh toán bằng chuyển khoản vào tài khoản của Bên B:', { gap: 0.5 })
   para(`- Chủ tài khoản: ${seller.name};`, { indent: 4, gap: 0.5, lh: 4.8 })

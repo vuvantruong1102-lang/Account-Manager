@@ -229,7 +229,7 @@ export function exportPaymentPDF(req) {
 
   // Số tiền đề nghị thanh toán: ưu tiên req.amount (người dùng nhập), nếu không có thì lấy tổng đơn
   const requestAmount = (req.amount != null && req.amount !== '') ? Number(req.amount) : total
-  const amountWords = docSoThanhChu(requestAmount).replace(/\.$/, '') + ' Việt Nam Đồng'
+  const amountWords = docSoThanhChu(requestAmount).replace(/\.$/, '')
 
   // ----- Nội dung chính: trình bày có cấu trúc, đẹp & chuyên nghiệp -----
   // Tách notes thành các dòng để nhận biết phần số tiền / tài khoản
