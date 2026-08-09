@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { formatVND, formatDate } from '../lib/constants'
 import { docSoThanhChu } from '../lib/numberToWords'
 import { Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
-import { exportContractPDF, DEFAULT_SELLER } from '../lib/contractPdf'
+import { exportContractPDF, DEFAULT_SELLER, DEFAULT_CLAUSES } from '../lib/contractPdf'
 import { exportWarehousePDF, exportDeliveryPDF } from '../lib/warehousePdf'
 import { exportPaymentPDF, DEFAULT_PAYMENT_NOTES, DEFAULT_PAYMENT_ORDER_DESC } from '../lib/paymentPdf'
 
@@ -43,14 +43,14 @@ const EMPTY = {
   delivery_time: 'không muộn hơn ngày ……/……/……',
   delivery_address: '',
   shipping_by: 'Chi phí vận chuyển do Bên B chịu.',
-  // Nội dung tùy chỉnh các điều khoản (rỗng = dùng mặc định trong PDF)
-  clause_1_2: '',
-  clause_1_4: '',
-  clause_1_5: '',
-  clause_2_4: '',
+  // Nội dung tùy chỉnh các điều khoản — điền sẵn mặc định, sửa trực tiếp trong ô
+  clause_1_2: DEFAULT_CLAUSES.clause_1_2,
+  clause_1_4: DEFAULT_CLAUSES.clause_1_4,
+  clause_1_5: DEFAULT_CLAUSES.clause_1_5,
+  clause_2_4: DEFAULT_CLAUSES.clause_2_4,
   clause_3_1: '',
-  clause_3_3: '',
-  clause_3_4: '',
+  clause_3_3: DEFAULT_CLAUSES.clause_3_3,
+  clause_3_4: DEFAULT_CLAUSES.clause_3_4,
   has_appendix: false,
   appendix_subtitle: 'V/v: Quy cách in logo và đóng gói sản phẩm',
   appendix_sections: [
@@ -138,8 +138,9 @@ export default function Contracts() {
     f.payment_notes = r.payment_notes || DEFAULT_PAYMENT_NOTES
     f.payment_order_desc = r.payment_order_desc || DEFAULT_PAYMENT_ORDER_DESC
     f.payment_amount = r.payment_amount != null ? r.payment_amount : ''
-    // clause null -> '' để textarea hiển thị đúng
-    ;['clause_1_2', 'clause_1_4', 'clause_1_5', 'clause_2_4', 'clause_3_1', 'clause_3_3', 'clause_3_4'].forEach((k) => { f[k] = r[k] || '' })
+    // clause: nếu bản ghi có nội dung thì dùng, nếu không thì điền mặc định để sửa trực tiếp
+    ;['clause_1_2', 'clause_1_4', 'clause_1_5', 'clause_2_4', 'clause_3_3', 'clause_3_4'].forEach((k) => { f[k] = r[k] || DEFAULT_CLAUSES[k] })
+    f.clause_3_1 = r.clause_3_1 || ''
     setForm(f); setEditId(r.id); setTab('contract'); setOpen(true)
   }
 
@@ -506,15 +507,18 @@ export default function Contracts() {
             </div>
 
             <fieldset className="rounded-xl border border-paper-line p-4">
-              <legend className="px-2 text-sm font-semibold text-ink">Tùy chỉnh nội dung điều khoản <span className="font-normal text-ink-faint">(để trống = dùng mẫu mặc định)</span></legend>
+              <legend className="flex items-center gap-2 px-2 text-sm font-semibold text-ink">
+                Nội dung các điều khoản <span className="font-normal text-ink-faint">(sửa trực tiếp trong ô)</span>
+                <button type="button" onClick={() => setForm((f) => ({ ...f, clause_1_2: DEFAULT_CLAUSES.clause_1_2, clause_1_4: DEFAULT_CLAUSES.clause_1_4, clause_1_5: DEFAULT_CLAUSES.clause_1_5, clause_2_4: DEFAULT_CLAUSES.clause_2_4, clause_3_3: DEFAULT_CLAUSES.clause_3_3, clause_3_4: DEFAULT_CLAUSES.clause_3_4 }))} className="text-xs font-semibold text-brand hover:underline">↺ Khôi phục mặc định</button>
+              </legend>
               <div className="space-y-3">
-                <div><label className="label-field">Điều 1.2 — Đơn giá đã bao gồm</label><textarea className="input-field h-16 text-sm" value={form.clause_1_2} onChange={set('clause_1_2')} placeholder="Đơn giá nêu trên đã bao gồm chi phí in logo, hộp bán lẻ, đai giấy, đóng gói và vận chuyển…; đã bao gồm thuế GTGT." /></div>
-                <div><label className="label-field">Điều 1.4 — Sản xuất & duyệt mẫu</label><textarea className="input-field h-20 text-sm" value={form.clause_1_4} onChange={set('clause_1_4')} placeholder="Bên B chỉ sản xuất hàng loạt sau khi Bên A xác nhận mẫu…" /></div>
-                <div><label className="label-field">Điều 1.5 — Bảo hành</label><textarea className="input-field h-14 text-sm" value={form.clause_1_5} onChange={set('clause_1_5')} placeholder="Hàng hóa được bảo hành 12 tháng kể từ ngày ký Biên bản giao nhận…" /></div>
-                <div><label className="label-field">Điều 2.4 — Nghĩa vụ thanh toán</label><textarea className="input-field h-20 text-sm" value={form.clause_2_4} onChange={set('clause_2_4')} placeholder="Nghĩa vụ thanh toán hoàn thành khi tiền được ghi có vào tài khoản của Bên B…" /></div>
-                <div><label className="label-field">Điều 3.1 — Điều kiện giao hàng (đầy đủ)</label><textarea className="input-field h-20 text-sm" value={form.clause_3_1} onChange={set('clause_3_1')} placeholder="Để trống sẽ tự ghép từ 'Thời gian giao hàng' ở trên. Nhập vào đây nếu muốn thay toàn bộ câu 3.1." /></div>
-                <div><label className="label-field">Điều 3.3 — Nghiệm thu khi giao</label><textarea className="input-field h-20 text-sm" value={form.clause_3_3} onChange={set('clause_3_3')} placeholder="Khi giao hàng, Hai Bên ký Biên bản giao nhận…" /></div>
-                <div><label className="label-field">Điều 3.4 — Chuyển rủi ro & sở hữu</label><textarea className="input-field h-16 text-sm" value={form.clause_3_4} onChange={set('clause_3_4')} placeholder="Rủi ro mất mát, hư hỏng chuyển sang Bên A khi ký Biên bản giao nhận…" /></div>
+                <div><label className="label-field">Điều 1.2 — Đơn giá đã bao gồm</label><textarea className="input-field h-20 text-sm leading-relaxed" value={form.clause_1_2} onChange={set('clause_1_2')} /></div>
+                <div><label className="label-field">Điều 1.4 — Sản xuất & duyệt mẫu</label><textarea className="input-field h-28 text-sm leading-relaxed" value={form.clause_1_4} onChange={set('clause_1_4')} /></div>
+                <div><label className="label-field">Điều 1.5 — Bảo hành</label><textarea className="input-field h-16 text-sm leading-relaxed" value={form.clause_1_5} onChange={set('clause_1_5')} /></div>
+                <div><label className="label-field">Điều 2.4 — Nghĩa vụ thanh toán</label><textarea className="input-field h-24 text-sm leading-relaxed" value={form.clause_2_4} onChange={set('clause_2_4')} /></div>
+                <div><label className="label-field">Điều 3.1 — Điều kiện giao hàng (đầy đủ)</label><textarea className="input-field h-20 text-sm leading-relaxed" value={form.clause_3_1} onChange={set('clause_3_1')} placeholder="Để trống sẽ tự ghép từ 'Thời gian giao hàng' ở trên. Nhập vào đây nếu muốn thay toàn bộ câu 3.1." /></div>
+                <div><label className="label-field">Điều 3.3 — Nghiệm thu khi giao</label><textarea className="input-field h-28 text-sm leading-relaxed" value={form.clause_3_3} onChange={set('clause_3_3')} /></div>
+                <div><label className="label-field">Điều 3.4 — Chuyển rủi ro & sở hữu</label><textarea className="input-field h-20 text-sm leading-relaxed" value={form.clause_3_4} onChange={set('clause_3_4')} /></div>
               </div>
             </fieldset>
 
