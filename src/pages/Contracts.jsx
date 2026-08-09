@@ -152,7 +152,7 @@ export default function Contracts() {
     setForm((f) => {
       const num = Number(raw) || 0
       const soFmt = raw === '' ? '' : num.toLocaleString('vi-VN')
-      const chu = raw === '' ? '' : docSoThanhChu(num).replace(/\.$/, '') + ' Việt Nam Đồng'
+      const chu = raw === '' ? '' : docSoThanhChu(num).replace(/\.$/, '')
       // Thay dòng "Bằng số:" và "Bằng chữ:" trong nội dung chính (giữ nguyên phần còn lại)
       let notes = f.payment_notes || ''
       notes = notes.replace(/(Bằng số:).*$/m, `$1 ${soFmt} VNĐ`)
@@ -487,7 +487,7 @@ export default function Contracts() {
                 {form.use_vat && <div className="text-ink-soft">Thuế: <b className="text-ink">{formatVND(vat)}</b></div>}
                 <div className="text-ink">Tổng: <b>{formatVND(grand)}</b></div>
               </div>
-              <p className="mt-1 text-right text-xs italic text-ink-faint">Bằng chữ: {docSoThanhChu(grand).replace(/\.$/, '')} Việt Nam Đồng</p>
+              <p className="mt-1 text-right text-xs italic text-ink-faint">Bằng chữ: {docSoThanhChu(grand)}</p>
             </div>
 
             <div>
@@ -632,7 +632,7 @@ export default function Contracts() {
               <p className="mt-1 text-[11px] text-ink-faint">
                 Nhập số tiền → tự điền "Bằng số" và "Bằng chữ" vào Nội dung chính bên dưới.
                 {form.payment_amount !== '' && form.payment_amount != null
-                  ? ` (${docSoThanhChu(Number(form.payment_amount) || 0).replace(/\.$/, '')} Việt Nam Đồng)`
+                  ? ` (${docSoThanhChu(Number(form.payment_amount) || 0)})`
                   : ''}
               </p>
             </div>
@@ -661,7 +661,7 @@ export default function Contracts() {
               <div>
                 <p className="text-sm text-ink-soft">Số tiền sẽ in trên phiếu</p>
                 <p className="text-xl font-bold text-ink">{formatVND((form.payment_amount !== '' && form.payment_amount != null) ? Number(form.payment_amount) : grand)}</p>
-                <p className="text-xs italic text-ink-faint">{docSoThanhChu((form.payment_amount !== '' && form.payment_amount != null) ? Number(form.payment_amount) : grand).replace(/\.$/, '')} Việt Nam Đồng</p>
+                <p className="text-xs italic text-ink-faint">{docSoThanhChu((form.payment_amount !== '' && form.payment_amount != null) ? Number(form.payment_amount) : grand)}</p>
               </div>
               <button type="button" className="btn-primary disabled:opacity-50" disabled={saving} onClick={() => saveAndExport('payment')}>
                 <FileText size={16} className="mr-1.5 inline" />{saving ? 'Đang lưu…' : 'Tạo Đề nghị thanh toán'}
