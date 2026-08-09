@@ -148,8 +148,8 @@ export function exportPaymentPDF(req) {
   doc.setFont('Roboto', 'normal').setFontSize(11.5).setTextColor(...INK)
   italicText(doc, fmtDate(req.created_at), W - M, y, { align: 'right' })
 
-  // Tiêu đề
-  y += 10
+  // Tiêu đề (đẩy xuống thấp hơn 1 hàng)
+  y += 16
   doc.setFont('Roboto', 'bold').setFontSize(18).setTextColor(...INK)
   doc.text('GIẤY ĐỀ NGHỊ THANH TOÁN', W / 2, y, { align: 'center' })
   y += 6.5
@@ -250,31 +250,28 @@ export function exportPaymentPDF(req) {
     if (l.trim() === '') { y += 3; return }
 
     if (isSoLine(l) || isChuLine(l)) {
-      // Dòng số tiền: in đậm, hơi lớn hơn, thụt vào
+      // Dòng số tiền: không in đậm, thụt vào
       const label = isSoLine(l) ? 'Bằng số:' : 'Bằng chữ:'
       let val = l.replace(/^Bằng (số|chữ):\s*/i, '').trim()
       if (!val) val = isSoLine(l) ? `${fmt(requestAmount)} VNĐ` : amountWords
       if (isSoLine(l) && !/VNĐ|VND/i.test(val)) val += ' VNĐ'
       if (y > H - 40) { doc.addPage(); y = 25 }
-      doc.setFont('Roboto', 'bold').setFontSize(12.5).setTextColor(...INK)
+      doc.setFont('Roboto', 'normal').setFontSize(12).setTextColor(...INK)
       doc.text(label, M + 4, y)
-      doc.setFont('Roboto', 'bold').setFontSize(12.5).setTextColor(...INK)
       doc.splitTextToSize(val, contentW - 32).forEach((ln, i) => { doc.text(ln, M + 32, y); if (i > 0) y += lh })
-      doc.setTextColor(...INK)
       y += lh + 0.5
       return
     }
 
-    // Dòng thường (kể cả tài khoản) — tài khoản để đậm nhãn
+    // Dòng thường (kể cả tài khoản) — nhãn KHÔNG in đậm
     if (y > H - 40) { doc.addPage(); y = 25 }
     if (isAcctLine(l)) {
       const idx = l.indexOf(':')
       const label = l.slice(0, idx + 1)
       const val = l.slice(idx + 1).trim()
-      doc.setFont('Roboto', 'bold').setFontSize(12).setTextColor(...INK)
+      doc.setFont('Roboto', 'normal').setFontSize(12).setTextColor(...INK)
       doc.text(label, M + 4, y)
       const lblW = doc.getTextWidth(label + ' ')
-      doc.setFont('Roboto', 'normal')
       doc.splitTextToSize(val, contentW - 8 - lblW).forEach((ln, i) => { doc.text(ln, M + 4 + lblW, y); if (i > 0) y += lh })
       y += lh
     } else {

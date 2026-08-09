@@ -45,8 +45,8 @@ export function exportWarehousePDF(data) {
   doc.setFont('Roboto', 'normal').setFontSize(8).setTextColor(...SOFT)
   doc.splitTextToSize(SELLER.address, 110).forEach((ln) => { doc.text(ln, M, y); y += 4 })
 
-  // Tiêu đề
-  y += 6
+  // Tiêu đề (đẩy xuống thấp hơn 1 hàng)
+  y += 12
   doc.setFont('Roboto', 'bold').setFontSize(15).setTextColor(...INK)
   doc.text('PHIẾU XUẤT KHO BÁN HÀNG', W / 2, y, { align: 'center' })
   y += 6

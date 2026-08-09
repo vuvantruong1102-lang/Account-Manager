@@ -116,16 +116,16 @@ export function exportContractPDF(data) {
   infoRow('BÊN MUA (BÊN A)', (buyer.name || '').toUpperCase(), { bold: true, labelW: 42 })
   infoRow('Địa chỉ', buyer.address, { labelW: 42 })
   infoRow('Mã số thuế', buyer.tax_code, { labelW: 42 })
-  infoRow('Người đại diện', buyer.rep_name, { bold: true, labelW: 42 })
-  infoRow('Chức vụ', buyer.rep_title, { bold: true, labelW: 42 })
+  infoRow('Người đại diện', buyer.rep_name, { labelW: 42 })
+  infoRow('Chức vụ', buyer.rep_title, { labelW: 42 })
   y += 4
 
   /* ---------- Bên B (BÁN - VNF) ---------- */
   infoRow('BÊN BÁN (BÊN B)', (seller.name || '').toUpperCase(), { bold: true, labelW: 42 })
   infoRow('Địa chỉ', seller.address, { labelW: 42 })
   infoRow('Mã số thuế', seller.tax_code, { labelW: 42 })
-  infoRow('Người đại diện', seller.rep_name, { bold: true, labelW: 42 })
-  infoRow('Chức vụ', seller.rep_title, { bold: true, labelW: 42 })
+  infoRow('Người đại diện', seller.rep_name, { labelW: 42 })
+  infoRow('Chức vụ', seller.rep_title, { labelW: 42 })
   y += 4
 
   para('Bên A và Bên B sau đây gọi riêng là "Bên", gọi chung là "Hai Bên".', { bold: true, gap: 1.5 })
@@ -193,11 +193,11 @@ export function exportContractPDF(data) {
   })
   y = doc.lastAutoTable.finalY + 7
 
-  para(`Bằng chữ: ${docSoThanhChu(grand).replace(/\.$/, '')} Việt Nam Đồng.`, { bold: true, gap: 3 })
+  para(`Bằng chữ: ${docSoThanhChu(grand)}`, { bold: true, gap: 3 })
 
   /* ---------- 1.2 ---------- */
   need(10)
-  para('1.2. Đơn giá nêu trên đã bao gồm chi phí in logo, hộp bán lẻ, đai giấy, đóng gói và vận chuyển đến địa điểm quy định tại Điều 3; đã bao gồm thuế GTGT.', { gap: 2, lh: 4.8 })
+  para('1.2. ' + (data.clause_1_2 || 'Đơn giá nêu trên đã bao gồm chi phí in logo, hộp bán lẻ, đai giấy, đóng gói và vận chuyển đến địa điểm quy định tại Điều 3; đã bao gồm thuế GTGT.'), { gap: 2, lh: 4.8 })
 
   /* ---------- 1.3 ---------- */
   const quality = data.quality_terms && data.quality_terms.length ? data.quality_terms : [
@@ -207,10 +207,10 @@ export function exportContractPDF(data) {
   quality.slice(1).forEach((q) => para(q, { gap: 1, lh: 4.8, indent: 6 }))
 
   /* ---------- 1.4 ---------- */
-  para('1.4. Bên B chỉ sản xuất hàng loạt sau khi Bên A xác nhận mẫu qua văn bản, email, tin nhắn hoặc hình thức điện tử khác của người phụ trách. Mọi thay đổi sau khi duyệt mẫu phải được Bên B chấp thuận; Bên A chịu chi phí và thời gian phát sinh. Sai lệch nhỏ về sắc độ do vật liệu, mực in hoặc thiết bị hiển thị, nếu phù hợp với mẫu đã duyệt và không ảnh hưởng đáng kể đến hình thức, công năng, không được coi là lỗi.', { gap: 1.5, lh: 4.8 })
+  para('1.4. ' + (data.clause_1_4 || 'Bên B chỉ sản xuất hàng loạt sau khi Bên A xác nhận mẫu qua văn bản, email, tin nhắn hoặc hình thức điện tử khác của người phụ trách. Mọi thay đổi sau khi duyệt mẫu phải được Bên B chấp thuận; Bên A chịu chi phí và thời gian phát sinh. Sai lệch nhỏ về sắc độ do vật liệu, mực in hoặc thiết bị hiển thị, nếu phù hợp với mẫu đã duyệt và không ảnh hưởng đáng kể đến hình thức, công năng, không được coi là lỗi.'), { gap: 1.5, lh: 4.8 })
 
   /* ---------- 1.5 ---------- */
-  para('1.5. Hàng hóa được bảo hành 12 tháng kể từ ngày ký Biên bản giao nhận theo Điều 3 của Hợp đồng.', { gap: 4, lh: 4.8 })
+  para('1.5. ' + (data.clause_1_5 || 'Hàng hóa được bảo hành 12 tháng kể từ ngày ký Biên bản giao nhận theo Điều 3 của Hợp đồng.'), { gap: 4, lh: 4.8 })
 
   /* ---------- ĐIỀU 2 ---------- */
   need(16)
@@ -230,15 +230,15 @@ export function exportContractPDF(data) {
   para(`- Số tài khoản: ${seller.account};`, { indent: 4, gap: 0.5, lh: 4.8 })
   para(`- Ngân hàng: ${seller.bank}.`, { indent: 4, gap: 2, lh: 4.8 })
 
-  para('2.4. Nghĩa vụ thanh toán hoàn thành khi tiền được ghi có vào tài khoản của Bên B. Nếu Bên A chậm thanh toán, Bên B có quyền tạm ngừng sản xuất hoặc giao hàng, điều chỉnh tiến độ tương ứng và yêu cầu lãi chậm trả theo Luật Thương mại cùng các chi phí hợp lý phát sinh trực tiếp.', { gap: 4, lh: 4.8 })
+  para('2.4. ' + (data.clause_2_4 || 'Nghĩa vụ thanh toán hoàn thành khi tiền được ghi có vào tài khoản của Bên B. Nếu Bên A chậm thanh toán, Bên B có quyền tạm ngừng sản xuất hoặc giao hàng, điều chỉnh tiến độ tương ứng và yêu cầu lãi chậm trả theo Luật Thương mại cùng các chi phí hợp lý phát sinh trực tiếp.'), { gap: 4, lh: 4.8 })
 
   /* ---------- ĐIỀU 3 ---------- */
   need(16)
   para('ĐIỀU 3. GIAO HÀNG VÀ NGHIỆM THU', { bold: true, gap: 2 })
-  para(`3.1. Bên B giao hàng ${data.delivery_time || 'không muộn hơn ngày ……/……/……'}, với điều kiện đã nhận đủ khoản thanh toán lần 1 và Bên A xác nhận mẫu cuối cùng đúng thời hạn. Nếu Bên A chậm thanh toán, chậm cung cấp thông tin hoặc chậm duyệt mẫu, thời hạn giao hàng được gia hạn tương ứng.`, { gap: 1.5, lh: 4.8 })
-  para(`3.2. Địa điểm giao hàng: ${data.delivery_address || '……………………………………………………'}. ${data.shipping_by || 'Bên B chịu chi phí vận chuyển đến địa điểm này.'}`, { gap: 1.5, lh: 4.8 })
-  para('3.3. Khi giao hàng, Hai Bên ký Biên bản giao nhận. Số lượng, chủng loại, tình trạng bao bì và hư hỏng bên ngoài phải được kiểm tra, ghi nhận ngay khi nhận hàng. Lỗi có thể nhận biết bằng kiểm tra thông thường phải được Bên A thông báo bằng văn bản hoặc email trong 03 ngày làm việc; hết thời hạn này, hàng hóa được coi là đã nghiệm thu đối với các lỗi đó.', { gap: 1.5, lh: 4.8 })
-  para('3.4. Rủi ro mất mát, hư hỏng chuyển sang Bên A khi ký Biên bản giao nhận; quyền sở hữu chuyển sang Bên A sau khi Bên B nhận đủ tiền.', { gap: 4, lh: 4.8 })
+  para('3.1. ' + (data.clause_3_1 || `Bên B giao hàng ${data.delivery_time || 'không muộn hơn ngày ……/……/……'}, với điều kiện đã nhận đủ khoản thanh toán lần 1 và Bên A xác nhận mẫu cuối cùng đúng thời hạn. Nếu Bên A chậm thanh toán, chậm cung cấp thông tin hoặc chậm duyệt mẫu, thời hạn giao hàng được gia hạn tương ứng.`), { gap: 1.5, lh: 4.8 })
+  para(`3.2. Địa điểm giao hàng: ${data.delivery_address || '……………………………………………………'}. ${data.shipping_by || 'Chi phí vận chuyển do Bên B chịu.'}`, { gap: 1.5, lh: 4.8 })
+  para('3.3. ' + (data.clause_3_3 || 'Khi giao hàng, Hai Bên ký Biên bản giao nhận. Số lượng, chủng loại, tình trạng bao bì và hư hỏng bên ngoài phải được kiểm tra, ghi nhận ngay khi nhận hàng. Lỗi có thể nhận biết bằng kiểm tra thông thường phải được Bên A thông báo bằng văn bản hoặc email trong 03 ngày làm việc; hết thời hạn này, hàng hóa được coi là đã nghiệm thu đối với các lỗi đó.'), { gap: 1.5, lh: 4.8 })
+  para('3.4. ' + (data.clause_3_4 || 'Rủi ro mất mát, hư hỏng chuyển sang Bên A khi ký Biên bản giao nhận; quyền sở hữu chuyển sang Bên A sau khi Bên B nhận đủ tiền.'), { gap: 4, lh: 4.8 })
 
   /* ---------- ĐIỀU 4 ---------- */
   need(14)
