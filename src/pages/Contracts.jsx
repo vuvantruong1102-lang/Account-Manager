@@ -50,6 +50,11 @@ const EMPTY = {
   clause_3_1: '',
   clause_3_3: DEFAULT_CLAUSES.clause_3_3,
   clause_3_4: DEFAULT_CLAUSES.clause_3_4,
+  clause_4: DEFAULT_CLAUSES.clause_4,
+  clause_5: DEFAULT_CLAUSES.clause_5,
+  clause_6: DEFAULT_CLAUSES.clause_6,
+  clause_7: DEFAULT_CLAUSES.clause_7,
+  clause_8: DEFAULT_CLAUSES.clause_8,
   has_appendix: false,
   appendix_subtitle: 'V/v: Quy cách in logo và đóng gói sản phẩm',
   appendix_sections: [
@@ -143,7 +148,7 @@ export default function Contracts() {
     f.payment_order_desc = r.payment_order_desc || DEFAULT_PAYMENT_ORDER_DESC
     f.payment_amount = r.payment_amount != null ? r.payment_amount : ''
     // clause: nếu bản ghi có nội dung thì dùng, nếu không thì điền mặc định để sửa trực tiếp
-    ;['clause_1_2', 'clause_1_3', 'clause_1_4', 'clause_1_5', 'clause_2_1', 'clause_2_2_intro', 'clause_2_2_a', 'clause_2_2_b', 'clause_2_3_intro', 'clause_2_4', 'clause_3_3', 'clause_3_4'].forEach((k) => { f[k] = r[k] || DEFAULT_CLAUSES[k] })
+    ;['clause_1_2', 'clause_1_3', 'clause_1_4', 'clause_1_5', 'clause_2_1', 'clause_2_2_intro', 'clause_2_2_a', 'clause_2_2_b', 'clause_2_3_intro', 'clause_2_4', 'clause_3_3', 'clause_3_4', 'clause_4', 'clause_5', 'clause_6', 'clause_7', 'clause_8'].forEach((k) => { f[k] = r[k] || DEFAULT_CLAUSES[k] })
     f.clause_3_1 = r.clause_3_1 || ''
     setForm(f); setEditId(r.id); setTab('contract'); setOpen(true)
   }
@@ -257,6 +262,11 @@ export default function Contracts() {
       clause_3_1: form.clause_3_1 || null,
       clause_3_3: form.clause_3_3 || null,
       clause_3_4: form.clause_3_4 || null,
+      clause_4: form.clause_4 || null,
+      clause_5: form.clause_5 || null,
+      clause_6: form.clause_6 || null,
+      clause_7: form.clause_7 || null,
+      clause_8: form.clause_8 || null,
       has_appendix: !!form.has_appendix,
       appendix_subtitle: form.appendix_subtitle,
       appendix_sections: data.appendix_sections,
@@ -506,29 +516,29 @@ export default function Contracts() {
               <p className="mt-1 text-right text-xs italic text-ink-faint">Bằng chữ: {docSoThanhChu(grand)}</p>
             </div>
 
-            <div>
-              <label className="label-field">Điều 1.3 — Tình trạng, bảo hành, quy cách <span className="text-ink-faint">(mỗi dòng 1 mục)</span></label>
-              <textarea className="input-field h-28 text-sm" value={form.clause_1_3} onChange={set('clause_1_3')} />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="label-field">Điều 2.2 — Tạm ứng lần 1 (%)</label>
-                <input type="number" className="input-field" value={form.advance_percent} onChange={set('advance_percent')} />
-                <p className="mt-1 text-[11px] text-ink-faint">Lần 1 {form.advance_percent || 0}% = {formatVND(Math.round(grand * (Number(form.advance_percent) || 0) / 100))}; Lần 2 còn lại.</p>
+            {/* PHẦN 1 — Các nội dung tùy chọn (khung viền đỏ để đỡ quên) */}
+            <fieldset className="rounded-xl border-2 border-brand/60 bg-brand-50/30 p-4">
+              <legend className="px-2 text-sm font-bold text-brand">Phần 1 — Các nội dung tùy chọn <span className="font-normal text-ink-faint">(kiểm tra kỹ trước khi xuất)</span></legend>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="label-field">Điều 2.2 — Tạm ứng lần 1 (%)</label>
+                  <input type="number" className="input-field" value={form.advance_percent} onChange={set('advance_percent')} />
+                  <p className="mt-1 text-[11px] text-ink-faint">Lần 1 {form.advance_percent || 0}% = {formatVND(Math.round(grand * (Number(form.advance_percent) || 0) / 100))}; Lần 2 còn lại.</p>
+                </div>
+                <div><label className="label-field">Điều 3.1 — Thời gian giao hàng</label><input className="input-field" value={form.delivery_time} onChange={set('delivery_time')} /></div>
+                <div className="sm:col-span-2"><label className="label-field">Điều 3.2 — Địa chỉ giao hàng</label><input className="input-field" value={form.delivery_address} onChange={set('delivery_address')} placeholder="VD: Bệnh viện FV, Quận 7, TP HCM" /></div>
+                <div className="sm:col-span-2"><label className="label-field">Điều 3.2 — Câu về chi phí vận chuyển</label><input className="input-field" value={form.shipping_by} onChange={set('shipping_by')} /></div>
               </div>
-              <div><label className="label-field">Điều 3.1 — Thời gian giao hàng</label><input className="input-field" value={form.delivery_time} onChange={set('delivery_time')} /></div>
-              <div className="sm:col-span-2"><label className="label-field">Điều 3.2 — Địa chỉ giao hàng</label><input className="input-field" value={form.delivery_address} onChange={set('delivery_address')} placeholder="VD: Bệnh viện FV, Quận 7, TP HCM" /></div>
-              <div className="sm:col-span-2"><label className="label-field">Điều 3.2 — Câu về chi phí vận chuyển</label><input className="input-field" value={form.shipping_by} onChange={set('shipping_by')} /></div>
-            </div>
+            </fieldset>
 
             <fieldset className="rounded-xl border border-paper-line p-4">
               <legend className="flex items-center gap-2 px-2 text-sm font-semibold text-ink">
-                Nội dung các điều khoản <span className="font-normal text-ink-faint">(sửa trực tiếp trong ô)</span>
-                <button type="button" onClick={() => setForm((f) => ({ ...f, clause_1_2: DEFAULT_CLAUSES.clause_1_2, clause_1_3: DEFAULT_CLAUSES.clause_1_3, clause_1_4: DEFAULT_CLAUSES.clause_1_4, clause_1_5: DEFAULT_CLAUSES.clause_1_5, clause_2_1: DEFAULT_CLAUSES.clause_2_1, clause_2_2_intro: DEFAULT_CLAUSES.clause_2_2_intro, clause_2_2_a: DEFAULT_CLAUSES.clause_2_2_a, clause_2_2_b: DEFAULT_CLAUSES.clause_2_2_b, clause_2_3_intro: DEFAULT_CLAUSES.clause_2_3_intro, clause_2_4: DEFAULT_CLAUSES.clause_2_4, clause_3_3: DEFAULT_CLAUSES.clause_3_3, clause_3_4: DEFAULT_CLAUSES.clause_3_4 }))} className="text-xs font-semibold text-brand hover:underline">↺ Khôi phục mặc định</button>
+                Phần 2 — Nội dung các điều khoản <span className="font-normal text-ink-faint">(sửa trực tiếp trong ô)</span>
+                <button type="button" onClick={() => setForm((f) => ({ ...f, clause_1_2: DEFAULT_CLAUSES.clause_1_2, clause_1_3: DEFAULT_CLAUSES.clause_1_3, clause_1_4: DEFAULT_CLAUSES.clause_1_4, clause_1_5: DEFAULT_CLAUSES.clause_1_5, clause_2_1: DEFAULT_CLAUSES.clause_2_1, clause_2_2_intro: DEFAULT_CLAUSES.clause_2_2_intro, clause_2_2_a: DEFAULT_CLAUSES.clause_2_2_a, clause_2_2_b: DEFAULT_CLAUSES.clause_2_2_b, clause_2_3_intro: DEFAULT_CLAUSES.clause_2_3_intro, clause_2_4: DEFAULT_CLAUSES.clause_2_4, clause_3_3: DEFAULT_CLAUSES.clause_3_3, clause_3_4: DEFAULT_CLAUSES.clause_3_4, clause_4: DEFAULT_CLAUSES.clause_4, clause_5: DEFAULT_CLAUSES.clause_5, clause_6: DEFAULT_CLAUSES.clause_6, clause_7: DEFAULT_CLAUSES.clause_7, clause_8: DEFAULT_CLAUSES.clause_8 }))} className="text-xs font-semibold text-brand hover:underline">↺ Khôi phục mặc định</button>
               </legend>
               <div className="space-y-3">
                 <div><label className="label-field">Điều 1.2 — Đơn giá đã bao gồm</label><textarea className="input-field h-20 text-sm leading-relaxed" value={form.clause_1_2} onChange={set('clause_1_2')} /></div>
+                <div><label className="label-field">Điều 1.3 — Tình trạng, bảo hành, quy cách <span className="text-ink-faint">(dòng đầu là tiêu đề, các dòng sau bắt đầu bằng "- ")</span></label><textarea className="input-field h-28 text-sm leading-relaxed" value={form.clause_1_3} onChange={set('clause_1_3')} /></div>
                 <div><label className="label-field">Điều 1.4 — Sản xuất & duyệt mẫu</label><textarea className="input-field h-28 text-sm leading-relaxed" value={form.clause_1_4} onChange={set('clause_1_4')} /></div>
                 <div><label className="label-field">Điều 1.5 — Bảo hành</label><textarea className="input-field h-16 text-sm leading-relaxed" value={form.clause_1_5} onChange={set('clause_1_5')} /></div>
                 <div><label className="label-field">Điều 2.1 — Tổng giá trị thanh toán <span className="text-ink-faint">(giữ {'{tong}'} {'{bangchu}'} {'{vat}'} để tự điền số)</span></label><textarea className="input-field h-16 text-sm leading-relaxed" value={form.clause_2_1} onChange={set('clause_2_1')} /></div>
@@ -540,6 +550,11 @@ export default function Contracts() {
                 <div><label className="label-field">Điều 3.1 — Điều kiện giao hàng (đầy đủ)</label><textarea className="input-field h-20 text-sm leading-relaxed" value={form.clause_3_1} onChange={set('clause_3_1')} placeholder="Để trống sẽ tự ghép từ 'Thời gian giao hàng' ở trên. Nhập vào đây nếu muốn thay toàn bộ câu 3.1." /></div>
                 <div><label className="label-field">Điều 3.3 — Nghiệm thu khi giao</label><textarea className="input-field h-28 text-sm leading-relaxed" value={form.clause_3_3} onChange={set('clause_3_3')} /></div>
                 <div><label className="label-field">Điều 3.4 — Chuyển rủi ro & sở hữu</label><textarea className="input-field h-20 text-sm leading-relaxed" value={form.clause_3_4} onChange={set('clause_3_4')} /></div>
+                <div><label className="label-field">Điều 4 — Quyền & nghĩa vụ Bên A <span className="text-ink-faint">(mỗi dòng 1 khoản, giữ số 4.1, 4.2…)</span></label><textarea className="input-field h-40 text-sm leading-relaxed" value={form.clause_4} onChange={set('clause_4')} /></div>
+                <div><label className="label-field">Điều 5 — Quyền & nghĩa vụ Bên B <span className="text-ink-faint">(mỗi dòng 1 khoản)</span></label><textarea className="input-field h-44 text-sm leading-relaxed" value={form.clause_5} onChange={set('clause_5')} /></div>
+                <div><label className="label-field">Điều 6 — Bất khả kháng <span className="text-ink-faint">(mỗi dòng 1 khoản)</span></label><textarea className="input-field h-40 text-sm leading-relaxed" value={form.clause_6} onChange={set('clause_6')} /></div>
+                <div><label className="label-field">Điều 7 — Vi phạm & giải quyết tranh chấp <span className="text-ink-faint">(mỗi dòng 1 khoản)</span></label><textarea className="input-field h-32 text-sm leading-relaxed" value={form.clause_7} onChange={set('clause_7')} /></div>
+                <div><label className="label-field">Điều 8 — Hiệu lực & điều khoản chung <span className="text-ink-faint">(mỗi dòng 1 khoản)</span></label><textarea className="input-field h-32 text-sm leading-relaxed" value={form.clause_8} onChange={set('clause_8')} /></div>
               </div>
             </fieldset>
 
