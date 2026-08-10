@@ -257,7 +257,11 @@ export function exportPaymentPDF(req) {
       if (y > H - 40) { doc.addPage(); y = 25 }
       doc.setFont('Roboto', 'normal').setFontSize(12).setTextColor(...INK)
       doc.text(label, M + 4, y)
-      doc.splitTextToSize(val, contentW - 32).forEach((ln, i) => { doc.text(ln, M + 32, y); if (i > 0) y += lh })
+      const valLines = doc.splitTextToSize(val, contentW - 32)
+      valLines.forEach((ln, i) => {
+        if (i > 0) y += lh          // tăng y TRƯỚC khi vẽ dòng tiếp theo
+        doc.text(ln, M + 32, y)
+      })
       y += lh + 0.5
       return
     }
@@ -271,7 +275,11 @@ export function exportPaymentPDF(req) {
       doc.setFont('Roboto', 'normal').setFontSize(12).setTextColor(...INK)
       doc.text(label, M + 4, y)
       const lblW = doc.getTextWidth(label + ' ')
-      doc.splitTextToSize(val, contentW - 8 - lblW).forEach((ln, i) => { doc.text(ln, M + 4 + lblW, y); if (i > 0) y += lh })
+      const acctLines = doc.splitTextToSize(val, contentW - 8 - lblW)
+      acctLines.forEach((ln, i) => {
+        if (i > 0) y += lh
+        doc.text(ln, M + 4 + lblW, y)
+      })
       y += lh
     } else {
       doc.setFont('Roboto', 'normal').setFontSize(12).setTextColor(...INK)

@@ -176,10 +176,11 @@ export function exportQuotePDF(quote) {
 
   // ===== Tùy chọn bao bì, đóng gói (dưới bảng giá, trên lưu ý) =====
   let py = afterTotalY + 8
-  const pkgText = (quote.packaging_text && quote.packaging_text.trim()) ? quote.packaging_text.trim() : ''
+  const pkgTier = quote.packaging_tier || 'Tùy chọn'
+  const pkgText = (pkgTier !== 'Tùy chọn' && quote.packaging_text && quote.packaging_text.trim()) ? quote.packaging_text.trim() : ''
   if (pkgText) {
     if (py + 30 > H) { doc.addPage(); py = 20 }
-    const tier = quote.packaging_tier || 'Standard'
+    const tier = pkgTier
     doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
     doc.text(`Tùy chọn bao bì, đóng gói: ${tier}`, M, py)
     py += 5
