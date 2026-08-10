@@ -9,7 +9,7 @@ import { exportContractPDF, DEFAULT_SELLER, DEFAULT_CLAUSES } from '../lib/contr
 import { exportWarehousePDF, exportDeliveryPDF } from '../lib/warehousePdf'
 import { exportPaymentPDF, DEFAULT_PAYMENT_NOTES, DEFAULT_PAYMENT_ORDER_DESC } from '../lib/paymentPdf'
 
-const newLine = () => ({ code: '', name: '', unit: 'Cái', color: 'Đen', qty: 1, price: 0 })
+const newLine = () => ({ code: '', name: '', unit: 'Cái', color: '', qty: 1, price: 0 })
 const newSection = () => ({ title: '', bullets: [''], text: '', image: '', caption: '' })
 
 function buyerCode(name) {
@@ -134,7 +134,8 @@ export default function Contracts() {
     f.items = (r.items?.length ? r.items : [newLine()]).map((it) => {
       const merged = { ...newLine(), ...it }
       // Chuẩn hóa màu về Trắng/Đen (mặc định Đen nếu giá trị lạ)
-      merged.color = /trắng|white/i.test(merged.color || '') ? 'Trắng' : 'Đen'
+      // Chuẩn hóa màu: nếu đã có giá trị thì map về Trắng/Đen, chưa có thì để rỗng (buộc chọn)
+      if (merged.color) merged.color = /trắng|white/i.test(merged.color) ? 'Trắng' : 'Đen'
       return merged
     })
     f.appendix_sections = (r.appendix_sections?.length ? r.appendix_sections : EMPTY.appendix_sections)
@@ -222,6 +223,8 @@ export default function Contracts() {
 
   const persist = async () => {
     if (!form.buyer.name.trim()) { alert('Nhập tên khách hàng (Bên A)'); setTab('contract'); return null }
+    const missingColor = form.items.some((it) => it.name && !it.color)
+    if (missingColor) { alert('Vui lòng chọn Màu (Trắng/Đen) cho tất cả mặt hàng.'); setTab('contract'); return null }
     setSaving(true)
     const data = buildData()
     const year = form.year || new Date().getFullYear()
@@ -474,7 +477,8 @@ export default function Contracts() {
                       </div>
                       <div className="sm:col-span-1"><input className="input-field py-1.5 text-sm" value={it.unit} onChange={(e) => setItem(i, 'unit', e.target.value)} placeholder="ĐVT" /></div>
                       <div className="sm:col-span-1">
-                        <select className="input-field py-1.5 text-sm" value={it.color || 'Đen'} onChange={(e) => setItem(i, 'color', e.target.value)}>
+                        <select className={`input-field py-1.5 text-sm ${!it.color ? 'text-ink-faint' : ''}`} value={it.color || ''} onChange={(e) => setItem(i, 'color', e.target.value)}>
+                          <option value="" disabled>Màu</option>
                           <option value="Đen">Đen</option>
                           <option value="Trắng">Trắng</option>
                         </select>
