@@ -120,8 +120,8 @@ export function exportWarehousePDF(data) {
     body: sumRows,
     margin: { left: M, right: M },
     theme: 'grid',
-    styles: { font: 'Roboto', fontSize: 9, cellPadding: { top: 2, bottom: 2, left: 2, right: 8 }, textColor: INK, lineColor: [150, 150, 150], lineWidth: 0.2 },
-    columnStyles: { 0: { halign: 'right' }, 1: { halign: 'right', cellWidth: 40, cellPadding: { top: 2, bottom: 2, left: 2, right: 2 } } },
+    styles: { font: 'Roboto', fontSize: 9, cellPadding: { top: 2, bottom: 2, left: 2, right: 2 }, textColor: INK, lineColor: [150, 150, 150], lineWidth: 0.2 },
+    columnStyles: { 0: { halign: 'right' }, 1: { halign: 'right', cellWidth: 26 } },
   })
   y = doc.lastAutoTable.finalY + 7
 
