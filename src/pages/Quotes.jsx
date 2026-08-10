@@ -86,8 +86,8 @@ const EMPTY = {
   contact_person: '', contact_email: '', valid_until: '',
   vat_percent: 8, is_comparison: false,
   intro: DEFAULT_INTRO,
-  packaging_tier: 'Standard',
-  packaging_text: PACKAGING_PRESETS.Standard,
+  packaging_tier: 'Tùy chọn',
+  packaging_text: '',
   notes: DEFAULT_NOTES,
   items: [newItem()],
 }
@@ -150,7 +150,7 @@ export default function Quotes() {
   }
   const openEdit = (r) => {
     const items = (r.items?.length ? r.items : [newItem()]).map((it) => ({ ...newItem(), ...it }))
-    setForm({ ...EMPTY, ...r, intro: r.intro || DEFAULT_INTRO, notes: r.notes || DEFAULT_NOTES, packaging_tier: r.packaging_tier || 'Standard', packaging_text: r.packaging_text || PACKAGING_PRESETS[r.packaging_tier || 'Standard'], items }); setEditId(r.id); setOpen(true)
+    setForm({ ...EMPTY, ...r, intro: r.intro || DEFAULT_INTRO, notes: r.notes || DEFAULT_NOTES, packaging_tier: r.packaging_tier || 'Tùy chọn', packaging_text: r.packaging_text || (r.packaging_tier && PACKAGING_PRESETS[r.packaging_tier] ? PACKAGING_PRESETS[r.packaging_tier] : ''), items }); setEditId(r.id); setOpen(true)
   }
 
   // Thành tiền mỗi dòng CHƯA VAT; VAT tính chung theo vat_percent của báo giá
@@ -181,7 +181,7 @@ export default function Quotes() {
       vat_percent: Number(form.vat_percent) || 0, discount: 0,
       is_comparison: isComparison,
       intro: form.intro, notes: form.notes, valid_until: form.valid_until || null,
-      packaging_tier: form.packaging_tier || 'Standard',
+      packaging_tier: form.packaging_tier || 'Tùy chọn',
       packaging_text: form.packaging_text || '',
     }
     let saved
@@ -342,25 +342,35 @@ export default function Quotes() {
 
           {/* Tùy chọn bao bì, đóng gói — hiện dưới bảng giá, trên phần lưu ý */}
           <div>
-            <label className="label-field">Tùy chọn bao bì, đóng gói <span className="text-ink-faint">(hiện dưới bảng giá — chọn gói & sửa nội dung)</span></label>
-            <div className="mb-2 flex gap-2">
-              {['Standard', 'Corporate', 'Premium'].map((tier) => (
+            <label className="label-field">Tùy chọn bao bì, đóng gói <span className="text-ink-faint">(chọn "Tùy chọn" = không hiện phần này trên báo giá)</span></label>
+            <div className="mb-2 flex flex-wrap gap-2">
+              {['Tùy chọn', 'Standard', 'Corporate', 'Premium'].map((tier) => (
                 <button
                   key={tier}
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, packaging_tier: tier, packaging_text: PACKAGING_PRESETS[tier] }))}
+                  onClick={() => setForm((f) => ({
+                    ...f,
+                    packaging_tier: tier,
+                    packaging_text: tier === 'Tùy chọn' ? '' : PACKAGING_PRESETS[tier],
+                  }))}
                   className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${form.packaging_tier === tier ? 'bg-brand text-white' : 'bg-brand-50 text-brand hover:bg-brand-100'}`}
                 >
                   {tier}
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, packaging_text: PACKAGING_PRESETS[f.packaging_tier || 'Standard'] }))}
-                className="ml-auto text-xs font-semibold text-brand hover:underline"
-              >↺ Khôi phục nội dung gói</button>
+              {form.packaging_tier !== 'Tùy chọn' && (
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, packaging_text: PACKAGING_PRESETS[f.packaging_tier] || '' }))}
+                  className="ml-auto text-xs font-semibold text-brand hover:underline"
+                >↺ Khôi phục nội dung gói</button>
+              )}
             </div>
-            <textarea className="input-field min-h-[90px]" value={form.packaging_text} onChange={set('packaging_text')} placeholder="Mỗi dòng một mục, bắt đầu bằng dấu -" />
+            {form.packaging_tier === 'Tùy chọn' ? (
+              <p className="rounded-lg bg-paper/60 px-3 py-2 text-xs text-ink-faint">Đang chọn "Tùy chọn" — phần bao bì, đóng gói sẽ không hiển thị trên báo giá. Chọn Standard / Corporate / Premium để thêm.</p>
+            ) : (
+              <textarea className="input-field min-h-[90px]" value={form.packaging_text} onChange={set('packaging_text')} placeholder="Mỗi dòng một mục, bắt đầu bằng dấu -" />
+            )}
           </div>
 
           {/* Lưu ý (gộp ghi chú + lưu ý, hiện dưới bảng trên báo giá) */}
