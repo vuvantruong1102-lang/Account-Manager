@@ -20,7 +20,7 @@ export const DEFAULT_SELLER = {
 // Nội dung mặc định các điều khoản có thể tùy chỉnh (dùng chung cho form nhập & PDF)
 export const DEFAULT_CLAUSES = {
   clause_1_2: 'Đơn giá nêu trên đã bao gồm thuế GTGT và chi phí in logo theo yêu cầu của bên A.',
-  clause_1_3: 'Tình trạng hàng hóa: Hàng mới 100%, đảm bảo chất lượng.\nThời gian bảo hành: 12 tháng kể từ ngày giao nhận.\nQuy cách in logo và đóng gói: theo bản Phụ lục của hợp đồng này.',
+  clause_1_3: 'Tình trạng hàng hóa\n- Hàng mới 100%, đảm bảo chất lượng.\n- Thời gian bảo hành: 12 tháng kể từ ngày giao nhận.\n- Quy cách in logo và đóng gói: theo bản Phụ lục của hợp đồng này.',
   clause_1_4: 'Bên B chỉ sản xuất hàng loạt sau khi Bên A xác nhận mẫu qua văn bản, email, tin nhắn hoặc hình thức điện tử khác của người phụ trách. Mọi thay đổi sau khi duyệt mẫu phải được Bên B chấp thuận; Bên A chịu chi phí và thời gian phát sinh. Sai lệch nhỏ về sắc độ do vật liệu, mực in hoặc thiết bị hiển thị, nếu phù hợp với mẫu đã duyệt và không ảnh hưởng đáng kể đến hình thức, công năng, không được coi là lỗi.',
   clause_1_5: 'Hàng hóa được bảo hành 12 tháng kể từ ngày ký Biên bản giao nhận theo Điều 3 của Hợp đồng.',
   // ĐIỀU 2 — dùng placeholder cho phần động: {tong} {bangchu} {vat} {pct1} {pct2} {amt1} {bangchu1} {amt2} {bangchu2}
@@ -32,6 +32,12 @@ export const DEFAULT_CLAUSES = {
   clause_2_4: 'Nghĩa vụ thanh toán hoàn thành khi tiền được ghi có vào tài khoản của Bên B. Nếu Bên A chậm thanh toán, Bên B có quyền tạm ngừng sản xuất hoặc giao hàng, điều chỉnh tiến độ tương ứng và yêu cầu lãi chậm trả theo Luật Thương mại cùng các chi phí hợp lý phát sinh trực tiếp.',
   clause_3_3: 'Khi giao hàng, Hai Bên ký Biên bản giao nhận. Số lượng, chủng loại, tình trạng bao bì và hư hỏng bên ngoài phải được kiểm tra, ghi nhận ngay khi nhận hàng. Lỗi có thể nhận biết bằng kiểm tra thông thường phải được Bên A thông báo bằng văn bản hoặc email trong 03 ngày làm việc; hết thời hạn này, hàng hóa được coi là đã nghiệm thu đối với các lỗi đó.',
   clause_3_4: 'Rủi ro mất mát, hư hỏng chuyển sang Bên A khi ký Biên bản giao nhận; quyền sở hữu chuyển sang Bên A sau khi Bên B nhận đủ tiền.',
+  // ĐIỀU 4-8: mỗi dòng là 1 mục (giữ số thứ tự đầu dòng), sửa được
+  clause_4: '4.1. Thanh toán đầy đủ, đúng hạn; cung cấp chính xác, kịp thời file logo, nội dung in, thông tin nhận hàng và các tài liệu cần thiết.\n4.2. Cam kết có quyền sử dụng hợp pháp logo, nhãn hiệu, hình ảnh và nội dung cung cấp; tự giải quyết và bồi hoàn cho Bên B các thiệt hại nếu phát sinh tranh chấp với bên thứ ba.\n4.3. Kiểm tra và xác nhận mẫu trong vòng 02 ngày làm việc kể từ khi nhận được đề nghị của Bên B. Xác nhận qua email, tin nhắn hoặc hình thức điện tử của đầu mối được coi là hợp lệ.\n4.4. Bố trí người nhận hàng, kiểm tra và ký chứng từ; có quyền yêu cầu Bên B sửa chữa, in lại, bổ sung hoặc đổi phần hàng không phù hợp do lỗi của Bên B.\n4.5. Mọi thay đổi hoặc hủy đơn sau khi duyệt mẫu phải được Bên B chấp thuận. Bên A thanh toán giá trị hàng đã hoàn thành, nguyên vật liệu không thể dùng cho khách hàng khác, cùng các chi phí thực tế, hợp lý không thể thu hồi.',
+  clause_5: '5.1. Yêu cầu Bên A thanh toán, cung cấp thông tin và xác nhận mẫu đúng hạn; được tạm ngừng thực hiện Hợp đồng khi Bên A chậm thực hiện các nghĩa vụ này sau khi đã thông báo.\n5.2. Cung cấp và giao hàng đúng Hợp đồng, Phụ lục và mẫu đã duyệt; cung cấp Biên bản giao nhận, Đề nghị thanh toán, hóa đơn GTGT và các tài liệu khác đã được Hai Bên thỏa thuận.\n5.3. Nếu hàng hóa không phù hợp do lỗi của Bên B, Bên B được ưu tiên sửa chữa, in lại, bổ sung, đổi sản phẩm tương đương, giảm giá hoặc hoàn trả giá trị phần không thể khắc phục. Thời hạn xử lý là 07 ngày làm việc kể từ khi nhận đủ hàng lỗi và thông tin cần thiết.\n5.4. Bảo hành lỗi kỹ thuật do sản xuất trong 12 tháng kể từ ngày giao nhận. Không bảo hành trường hợp rơi vỡ, va đập, vào nước, cháy nổ hoặc biến dạng do tác động bên ngoài; sử dụng sai hướng dẫn hoặc tự ý tháo sửa; hao mòn tự nhiên.\n5.5. Nếu Bên B giao hàng chậm do lỗi của mình, mức phạt là 0,05% giá trị phần hàng giao chậm cho mỗi ngày chậm, tối đa 8% giá trị phần nghĩa vụ bị vi phạm. Không áp dụng nếu chậm do Bên A, do Hai Bên gia hạn hoặc do bất khả kháng.\n5.6. Chỉ sử dụng logo, nhãn hiệu, hình ảnh và nội dung của Bên A để thực hiện Hợp đồng, trừ khi được Bên A đồng ý bằng văn bản.',
+  clause_6: '6.1. Bất khả kháng là sự kiện xảy ra khách quan, không thể lường trước và không thể khắc phục dù Bên bị ảnh hưởng đã áp dụng biện pháp cần thiết, hợp lý, như thiên tai, hỏa hoạn lớn, dịch bệnh do cơ quan có thẩm quyền công bố, chiến tranh, bạo loạn, đình công diện rộng, gián đoạn nghiêm trọng giao thông hoặc điện, hoặc quyết định của cơ quan nhà nước làm một Bên không thể thực hiện nghĩa vụ. Thiếu vốn, biến động giá thông thường hoặc lỗi của nhà cung cấp có thể thay thế hợp lý không đương nhiên là bất khả kháng.\n6.2. Bên bị ảnh hưởng phải thông báo bằng văn bản hoặc email trong vòng 03 ngày làm việc kể từ khi xảy ra sự kiện, nêu nghĩa vụ bị ảnh hưởng, thời gian dự kiến và biện pháp hạn chế thiệt hại; đồng thời cung cấp chứng cứ theo yêu cầu hợp lý.\n6.3. Bên bị ảnh hưởng được miễn trách nhiệm đối với phần nghĩa vụ bị ảnh hưởng trực tiếp; thời hạn thực hiện được gia hạn tương ứng. Nếu sự kiện bất khả kháng kéo dài liên tục quá 30 ngày, Hai Bên thương lượng phương án tiếp tục hoặc chấm dứt phần Hợp đồng chưa thực hiện.',
+  clause_7: '7.1. Bên vi phạm phải khắc phục trong vòng 05 ngày làm việc kể từ khi nhận được thông báo bằng văn bản. Nếu không khắc phục hoặc vi phạm làm mục đích Hợp đồng không đạt được, Bên bị vi phạm có quyền tạm ngừng hoặc chấm dứt phần Hợp đồng chưa thực hiện, yêu cầu phạt vi phạm và bồi thường thiệt hại thực tế theo quy định.\n7.2. Tranh chấp trước hết được thương lượng trong vòng 30 ngày kể từ ngày một Bên nhận thông báo tranh chấp. Nếu không giải quyết được, tranh chấp được đưa ra Tòa án có thẩm quyền nơi Bên B đặt trụ sở. Bản án có hiệu lực pháp luật có giá trị bắt buộc với Hai Bên.',
+  clause_8: '8.1. Hợp đồng có hiệu lực từ ngày đại diện có thẩm quyền của Hai Bên ký và tự động chấm dứt khi các nghĩa vụ đã hoàn thành, trừ nghĩa vụ bảo hành, thanh toán, bồi thường và giải quyết tranh chấp còn tiếp tục theo nội dung Hợp đồng.\n8.2. Phụ lục, mẫu được duyệt và các sửa đổi, bổ sung bằng văn bản là bộ phận không tách rời của Hợp đồng. Xác nhận qua email, tin nhắn hoặc hình thức điện tử của đầu mối do mỗi Bên chỉ định có giá trị đối với việc duyệt mẫu, tiến độ, giao nhận và các vấn đề thực hiện Hợp đồng, trừ việc sửa đổi giá trị Hợp đồng hoặc chấm dứt Hợp đồng phải do người có thẩm quyền xác nhận.\n8.3. Hợp đồng được lập thành 04 bản có giá trị pháp lý như nhau, mỗi Bên giữ 02 bản để thực hiện.',
 }
 
 const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('vi-VN')
@@ -271,60 +277,31 @@ export function exportContractPDF(data) {
   /* ---------- ĐIỀU 4 ---------- */
   need(14)
   para('ĐIỀU 4. QUYỀN VÀ NGHĨA VỤ CỦA BÊN A', { bold: true, gap: 2 })
-  const d4 = [
-    '4.1. Thanh toán đầy đủ, đúng hạn; cung cấp chính xác, kịp thời file logo, nội dung in, thông tin nhận hàng và các tài liệu cần thiết.',
-    '4.2. Cam kết có quyền sử dụng hợp pháp logo, nhãn hiệu, hình ảnh và nội dung cung cấp; tự giải quyết và bồi hoàn cho Bên B các thiệt hại nếu phát sinh tranh chấp với bên thứ ba.',
-    '4.3. Kiểm tra và xác nhận mẫu trong vòng 02 ngày làm việc kể từ khi nhận được đề nghị của Bên B. Xác nhận qua email, tin nhắn hoặc hình thức điện tử của đầu mối được coi là hợp lệ.',
-    '4.4. Bố trí người nhận hàng, kiểm tra và ký chứng từ; có quyền yêu cầu Bên B sửa chữa, in lại, bổ sung hoặc đổi phần hàng không phù hợp do lỗi của Bên B.',
-    '4.5. Mọi thay đổi hoặc hủy đơn sau khi duyệt mẫu phải được Bên B chấp thuận. Bên A thanh toán giá trị hàng đã hoàn thành, nguyên vật liệu không thể dùng cho khách hàng khác, cùng các chi phí thực tế, hợp lý không thể thu hồi.',
-  ]
-  d4.forEach((l) => para(l, { gap: 1, lh: 4.8 }))
+  ;(data.clause_4 || DEFAULT_CLAUSES.clause_4).split('\n').map((s) => s.trim()).filter(Boolean).forEach((l) => para(l, { gap: 1, lh: 4.8 }))
   y += 2
 
   /* ---------- ĐIỀU 5 ---------- */
   need(14)
   para('ĐIỀU 5. QUYỀN VÀ NGHĨA VỤ CỦA BÊN B', { bold: true, gap: 2 })
-  const d5 = [
-    '5.1. Yêu cầu Bên A thanh toán, cung cấp thông tin và xác nhận mẫu đúng hạn; được tạm ngừng thực hiện Hợp đồng khi Bên A chậm thực hiện các nghĩa vụ này sau khi đã thông báo.',
-    '5.2. Cung cấp và giao hàng đúng Hợp đồng, Phụ lục và mẫu đã duyệt; cung cấp Biên bản giao nhận, Đề nghị thanh toán, hóa đơn GTGT và các tài liệu khác đã được Hai Bên thỏa thuận.',
-    '5.3. Nếu hàng hóa không phù hợp do lỗi của Bên B, Bên B được ưu tiên sửa chữa, in lại, bổ sung, đổi sản phẩm tương đương, giảm giá hoặc hoàn trả giá trị phần không thể khắc phục. Thời hạn xử lý là 07 ngày làm việc kể từ khi nhận đủ hàng lỗi và thông tin cần thiết.',
-    '5.4. Bảo hành lỗi kỹ thuật do sản xuất trong 12 tháng kể từ ngày giao nhận. Không bảo hành trường hợp rơi vỡ, va đập, vào nước, cháy nổ hoặc biến dạng do tác động bên ngoài; sử dụng sai hướng dẫn hoặc tự ý tháo sửa; hao mòn tự nhiên.',
-    '5.5. Nếu Bên B giao hàng chậm do lỗi của mình, mức phạt là 0,05% giá trị phần hàng giao chậm cho mỗi ngày chậm, tối đa 8% giá trị phần nghĩa vụ bị vi phạm. Không áp dụng nếu chậm do Bên A, do Hai Bên gia hạn hoặc do bất khả kháng.',
-    '5.6. Chỉ sử dụng logo, nhãn hiệu, hình ảnh và nội dung của Bên A để thực hiện Hợp đồng, trừ khi được Bên A đồng ý bằng văn bản.',
-  ]
-  d5.forEach((l) => para(l, { gap: 1, lh: 4.8 }))
+  ;(data.clause_5 || DEFAULT_CLAUSES.clause_5).split('\n').map((s) => s.trim()).filter(Boolean).forEach((l) => para(l, { gap: 1, lh: 4.8 }))
   y += 2
 
   /* ---------- ĐIỀU 6 ---------- */
   need(14)
   para('ĐIỀU 6. BẤT KHẢ KHÁNG', { bold: true, gap: 2 })
-  const d6 = [
-    '6.1. Bất khả kháng là sự kiện xảy ra khách quan, không thể lường trước và không thể khắc phục dù Bên bị ảnh hưởng đã áp dụng biện pháp cần thiết, hợp lý, như thiên tai, hỏa hoạn lớn, dịch bệnh do cơ quan có thẩm quyền công bố, chiến tranh, bạo loạn, đình công diện rộng, gián đoạn nghiêm trọng giao thông hoặc điện, hoặc quyết định của cơ quan nhà nước làm một Bên không thể thực hiện nghĩa vụ. Thiếu vốn, biến động giá thông thường hoặc lỗi của nhà cung cấp có thể thay thế hợp lý không đương nhiên là bất khả kháng.',
-    '6.2. Bên bị ảnh hưởng phải thông báo bằng văn bản hoặc email trong vòng 03 ngày làm việc kể từ khi xảy ra sự kiện, nêu nghĩa vụ bị ảnh hưởng, thời gian dự kiến và biện pháp hạn chế thiệt hại; đồng thời cung cấp chứng cứ theo yêu cầu hợp lý.',
-    '6.3. Bên bị ảnh hưởng được miễn trách nhiệm đối với phần nghĩa vụ bị ảnh hưởng trực tiếp; thời hạn thực hiện được gia hạn tương ứng. Nếu sự kiện bất khả kháng kéo dài liên tục quá 30 ngày, Hai Bên thương lượng phương án tiếp tục hoặc chấm dứt phần Hợp đồng chưa thực hiện.',
-  ]
-  d6.forEach((l) => para(l, { gap: 1, lh: 4.8 }))
+  ;(data.clause_6 || DEFAULT_CLAUSES.clause_6).split('\n').map((s) => s.trim()).filter(Boolean).forEach((l) => para(l, { gap: 1, lh: 4.8 }))
   y += 2
 
   /* ---------- ĐIỀU 7 ---------- */
   need(14)
   para('ĐIỀU 7. VI PHẠM, CHẤM DỨT VÀ GIẢI QUYẾT TRANH CHẤP', { bold: true, gap: 2 })
-  const d7 = [
-    '7.1. Bên vi phạm phải khắc phục trong vòng 05 ngày làm việc kể từ khi nhận được thông báo bằng văn bản. Nếu không khắc phục hoặc vi phạm làm mục đích Hợp đồng không đạt được, Bên bị vi phạm có quyền tạm ngừng hoặc chấm dứt phần Hợp đồng chưa thực hiện, yêu cầu phạt vi phạm và bồi thường thiệt hại thực tế theo quy định.',
-    '7.2. Tranh chấp trước hết được thương lượng trong vòng 30 ngày kể từ ngày một Bên nhận thông báo tranh chấp. Nếu không giải quyết được, tranh chấp được đưa ra Tòa án có thẩm quyền nơi Bên B đặt trụ sở. Bản án có hiệu lực pháp luật có giá trị bắt buộc với Hai Bên.',
-  ]
-  d7.forEach((l) => para(l, { gap: 1, lh: 4.8 }))
+  ;(data.clause_7 || DEFAULT_CLAUSES.clause_7).split('\n').map((s) => s.trim()).filter(Boolean).forEach((l) => para(l, { gap: 1, lh: 4.8 }))
   y += 2
 
   /* ---------- ĐIỀU 8 ---------- */
   need(14)
   para('ĐIỀU 8. HIỆU LỰC VÀ ĐIỀU KHOẢN CHUNG', { bold: true, gap: 2 })
-  const d8 = [
-    '8.1. Hợp đồng có hiệu lực từ ngày đại diện có thẩm quyền của Hai Bên ký và tự động chấm dứt khi các nghĩa vụ đã hoàn thành, trừ nghĩa vụ bảo hành, thanh toán, bồi thường và giải quyết tranh chấp còn tiếp tục theo nội dung Hợp đồng.',
-    '8.2. Phụ lục, mẫu được duyệt và các sửa đổi, bổ sung bằng văn bản là bộ phận không tách rời của Hợp đồng. Xác nhận qua email, tin nhắn hoặc hình thức điện tử của đầu mối do mỗi Bên chỉ định có giá trị đối với việc duyệt mẫu, tiến độ, giao nhận và các vấn đề thực hiện Hợp đồng, trừ việc sửa đổi giá trị Hợp đồng hoặc chấm dứt Hợp đồng phải do người có thẩm quyền xác nhận.',
-    '8.3. Hợp đồng được lập thành 04 bản có giá trị pháp lý như nhau, mỗi Bên giữ 02 bản để thực hiện.',
-  ]
-  d8.forEach((l) => para(l, { gap: 1, lh: 4.8 }))
+  ;(data.clause_8 || DEFAULT_CLAUSES.clause_8).split('\n').map((s) => s.trim()).filter(Boolean).forEach((l) => para(l, { gap: 1, lh: 4.8 }))
   y += 4
 
   /* ---------- Chữ ký hợp đồng ---------- */
