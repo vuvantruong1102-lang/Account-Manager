@@ -23,6 +23,12 @@ export const DEFAULT_CLAUSES = {
   clause_1_3: 'Tình trạng hàng hóa: Hàng mới 100%, đảm bảo chất lượng.\nThời gian bảo hành: 12 tháng kể từ ngày giao nhận.\nQuy cách in logo và đóng gói: theo bản Phụ lục của hợp đồng này.',
   clause_1_4: 'Bên B chỉ sản xuất hàng loạt sau khi Bên A xác nhận mẫu qua văn bản, email, tin nhắn hoặc hình thức điện tử khác của người phụ trách. Mọi thay đổi sau khi duyệt mẫu phải được Bên B chấp thuận; Bên A chịu chi phí và thời gian phát sinh. Sai lệch nhỏ về sắc độ do vật liệu, mực in hoặc thiết bị hiển thị, nếu phù hợp với mẫu đã duyệt và không ảnh hưởng đáng kể đến hình thức, công năng, không được coi là lỗi.',
   clause_1_5: 'Hàng hóa được bảo hành 12 tháng kể từ ngày ký Biên bản giao nhận theo Điều 3 của Hợp đồng.',
+  // ĐIỀU 2 — dùng placeholder cho phần động: {tong} {bangchu} {vat} {pct1} {pct2} {amt1} {bangchu1} {amt2} {bangchu2}
+  clause_2_1: 'Tổng giá trị thanh toán là {tong} đồng (Bằng chữ: {bangchu}), đã bao gồm thuế GTGT {vat}%.',
+  clause_2_2_intro: 'Bên A thanh toán thành 02 lần:',
+  clause_2_2_a: 'a) Lần 1: Thanh toán {pct1}% giá trị Hợp đồng, tương ứng {amt1} đồng (Bằng chữ: {bangchu1}) trong vòng 02 ngày làm việc kể từ ngày Hợp đồng được ký và Bên A nhận được đề nghị thanh toán hợp lệ. Bên B triển khai sản xuất sau khi nhận đủ khoản này và mẫu cuối cùng đã được Bên A xác nhận.',
+  clause_2_2_b: 'b) Lần 2: Thanh toán {pct2}% giá trị Hợp đồng còn lại, tương ứng {amt2} đồng (Bằng chữ: {bangchu2}) trong vòng 05 ngày làm việc kể từ ngày Bên B giao đủ hàng và cung cấp Biên bản giao nhận, Đề nghị thanh toán và hóa đơn GTGT hợp lệ.',
+  clause_2_3_intro: 'Thanh toán bằng chuyển khoản vào tài khoản của Bên B:',
   clause_2_4: 'Nghĩa vụ thanh toán hoàn thành khi tiền được ghi có vào tài khoản của Bên B. Nếu Bên A chậm thanh toán, Bên B có quyền tạm ngừng sản xuất hoặc giao hàng, điều chỉnh tiến độ tương ứng và yêu cầu lãi chậm trả theo Luật Thương mại cùng các chi phí hợp lý phát sinh trực tiếp.',
   clause_3_3: 'Khi giao hàng, Hai Bên ký Biên bản giao nhận. Số lượng, chủng loại, tình trạng bao bì và hư hỏng bên ngoài phải được kiểm tra, ghi nhận ngay khi nhận hàng. Lỗi có thể nhận biết bằng kiểm tra thông thường phải được Bên A thông báo bằng văn bản hoặc email trong 03 ngày làm việc; hết thời hạn này, hàng hóa được coi là đã nghiệm thu đối với các lỗi đó.',
   clause_3_4: 'Rủi ro mất mát, hư hỏng chuyển sang Bên A khi ký Biên bản giao nhận; quyền sở hữu chuyển sang Bên A sau khi Bên B nhận đủ tiền.',
@@ -195,8 +201,8 @@ export function exportContractPDF(data) {
       0: { halign: 'center', cellWidth: 8 },
       1: { halign: 'left' },
       2: { halign: 'center', cellWidth: 11 },
-      3: { halign: 'center', cellWidth: 14 },
-      4: { halign: 'center', cellWidth: 11 },
+      3: { halign: 'center', cellWidth: 13 },
+      4: { halign: 'center', cellWidth: 16 },
       5: { halign: 'center', cellWidth: 13 },
       6: { halign: 'right', cellWidth: 22 },
       7: { halign: 'right', cellWidth: 24 },
@@ -225,17 +231,29 @@ export function exportContractPDF(data) {
   /* ---------- ĐIỀU 2 ---------- */
   need(16)
   para('ĐIỀU 2. THANH TOÁN', { bold: true, gap: 2 })
-  para(`2.1. Tổng giá trị thanh toán là ${fmt(grand)} đồng (Bằng chữ: ${docSoThanhChu(grand).replace(/\.$/, '')}), đã bao gồm thuế GTGT ${useVat ? vatRate : 0}%.`, { gap: 2, lh: 4.8 })
+  const bangChu = docSoThanhChu(grand).replace(/\.$/, '')
+  const s21 = (data.clause_2_1 || DEFAULT_CLAUSES.clause_2_1)
+    .replace(/\{tong\}/g, fmt(grand))
+    .replace(/\{bangchu\}/g, bangChu)
+    .replace(/\{vat\}/g, String(useVat ? vatRate : 0))
+  para('2.1. ' + s21, { gap: 2, lh: 4.8 })
 
-  para('2.2. Bên A thanh toán thành 02 lần:', { gap: 1 })
+  para('2.2. ' + (data.clause_2_2_intro || DEFAULT_CLAUSES.clause_2_2_intro), { gap: 1 })
   const pct1 = Number(data.advance_percent ?? 70)
   const pct2 = 100 - pct1
   const amt1 = Math.round(grand * pct1 / 100)
   const amt2 = grand - amt1
-  para(`a) Lần 1: Thanh toán ${pct1}% giá trị Hợp đồng, tương ứng ${fmt(amt1)} đồng (Bằng chữ: ${docSoThanhChu(amt1).replace(/\.$/, '')}) trong vòng 02 ngày làm việc kể từ ngày Hợp đồng được ký và Bên A nhận được đề nghị thanh toán hợp lệ. Bên B triển khai sản xuất sau khi nhận đủ khoản này và mẫu cuối cùng đã được Bên A xác nhận.`, { gap: 1.5, lh: 4.8, indent: 4 })
-  para(`b) Lần 2: Thanh toán ${pct2}% giá trị Hợp đồng còn lại, tương ứng ${fmt(amt2)} đồng (Bằng chữ: ${docSoThanhChu(amt2).replace(/\.$/, '')}) trong vòng 05 ngày làm việc kể từ ngày Bên B giao đủ hàng và cung cấp Biên bản giao nhận, Đề nghị thanh toán và hóa đơn GTGT hợp lệ.`, { gap: 2, lh: 4.8, indent: 4 })
+  const fillAB = (tpl) => tpl
+    .replace(/\{pct1\}/g, String(pct1))
+    .replace(/\{pct2\}/g, String(pct2))
+    .replace(/\{amt1\}/g, fmt(amt1))
+    .replace(/\{amt2\}/g, fmt(amt2))
+    .replace(/\{bangchu1\}/g, docSoThanhChu(amt1).replace(/\.$/, ''))
+    .replace(/\{bangchu2\}/g, docSoThanhChu(amt2).replace(/\.$/, ''))
+  para(fillAB(data.clause_2_2_a || DEFAULT_CLAUSES.clause_2_2_a), { gap: 1.5, lh: 4.8, indent: 4 })
+  para(fillAB(data.clause_2_2_b || DEFAULT_CLAUSES.clause_2_2_b), { gap: 2, lh: 4.8, indent: 4 })
 
-  para('2.3. Thanh toán bằng chuyển khoản vào tài khoản của Bên B:', { gap: 0.5 })
+  para('2.3. ' + (data.clause_2_3_intro || DEFAULT_CLAUSES.clause_2_3_intro), { gap: 0.5 })
   para(`- Chủ tài khoản: ${seller.name};`, { indent: 4, gap: 0.5, lh: 4.8 })
   para(`- Số tài khoản: ${seller.account};`, { indent: 4, gap: 0.5, lh: 4.8 })
   para(`- Ngân hàng: ${seller.bank}.`, { indent: 4, gap: 2, lh: 4.8 })
