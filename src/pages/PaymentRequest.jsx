@@ -4,28 +4,19 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { formatVND, formatDate } from '../lib/constants'
 import { Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
-import { exportPaymentPDF, DEFAULT_PAYMENT_NOTES } from '../lib/paymentPdf'
+import { exportPaymentPDF, DEFAULT_PAYMENT_NOTES, DEFAULT_PAYMENT_ORDER_DESC } from '../lib/paymentPdf'
+import { docSoThanhChu } from '../lib/numberToWords'
 
 const newLine = () => ({ name: '', qty: 1, unit: 'Cái', price: 0 })
 
-const DEFAULT_ORDER_DESC = 'Căn cứ vào Hợp đồng số 2207/2026/DT5.1-VNF ký ngày 22/07/2026 giữa Công ty cổ phần năng lượng DT5.1 và Công ty TNHH Thương mại dịch vụ và sản xuất VNF Việt Nam.'
-
-const DEFAULT_MAIN =
-  'Căn cứ Điều 2 về phương thức thanh toán của hợp đồng, Quý công ty cần thanh toán:\n' +
-  'Số tiền: **20.000.000đ** (Bằng chữ: *Hai mươi triệu đồng*).\n' +
-  'Kính đề nghị Quý Công ty thanh toán số tiền trên cho chúng tôi, chi tiết cụ thể như sau:\n' +
-  '     + Tên đơn vị thụ hưởng: **Công ty TNHH thương mại dịch vụ và sản xuất VNF Việt Nam**\n' +
-  '     + Số tài khoản: 19135661522015\n' +
-  '     + Tại ngân hàng: Thương mại cổ phần Kỹ thương Việt Nam (Techcombank)\n' +
-  'Rất mong sớm nhận được sự chấp nhận của Quý Công ty.\n' +
-  'Xin chân thành cảm ơn!'
-
 const EMPTY = {
-  doc_number: 'DN03',
+  doc_number: '',
+  doc_date: '',
   company_name: '', address: '', tax_code: '',
-  order_desc: DEFAULT_ORDER_DESC,
+  amount: '',
+  order_desc: DEFAULT_PAYMENT_ORDER_DESC,
   show_items: true,
-  notes: DEFAULT_MAIN,
+  notes: DEFAULT_PAYMENT_NOTES,
   items: [newLine()],
 }
 
@@ -51,11 +42,37 @@ export default function PaymentRequest() {
   }
   useEffect(() => { load() }, [])
 
-  const openNew = () => { setForm({ ...EMPTY, items: [newLine()] }); setEditId(null); setOpen(true) }
+  // Sinh số DNTT tiếp theo dạng 001/2026/VNF-DNTT (tự tăng theo năm)
+  const genDocNumber = () => {
+    const year = new Date().getFullYear()
+    let max = 0
+    rows.forEach((r) => {
+      const m = String(r.doc_number || '').match(/^(\d+)\/(\d{4})\/VNF-DNTT$/)
+      if (m && Number(m[2]) === year) max = Math.max(max, Number(m[1]))
+    })
+    return `${String(max + 1).padStart(3, '0')}/${year}/VNF-DNTT`
+  }
+
+  const openNew = () => { setForm({ ...EMPTY, doc_number: genDocNumber(), items: [newLine()] }); setEditId(null); setOpen(true) }
   const openEdit = (r) => {
     const items = (r.items?.length ? r.items : [newLine()]).map((it) => ({ ...newLine(), ...it }))
-    setForm({ ...EMPTY, ...r, notes: r.notes || DEFAULT_MAIN, show_items: r.show_items !== false, items })
+    setForm({ ...EMPTY, ...r, notes: r.notes || DEFAULT_PAYMENT_NOTES, order_desc: r.order_desc || DEFAULT_PAYMENT_ORDER_DESC, amount: r.amount != null ? r.amount : '', show_items: r.show_items !== false, items })
     setEditId(r.id); setOpen(true)
+  }
+
+  // Khi nhập số tiền: tự điền "Bằng số" và "Bằng chữ" ngay trong nội dung chính
+  const setAmount = (e) => {
+    const raw = e.target.value
+    setForm((f) => {
+      const num = Number(raw) || 0
+      const so = raw === '' ? '' : `${num.toLocaleString('vi-VN')} VNĐ`
+      const chu = raw === '' ? '' : docSoThanhChu(num).replace(/\.$/, '')
+      let notes = f.notes || DEFAULT_PAYMENT_NOTES
+      notes = notes
+        .replace(/^(Bằng số:).*$/m, `$1 ${so}`)
+        .replace(/^(Bằng chữ:).*$/m, `$1 ${chu}`)
+      return { ...f, amount: raw, notes }
+    })
   }
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
@@ -87,8 +104,10 @@ export default function PaymentRequest() {
     }))
     const payload = {
       user_id: user.id,
-      doc_number: form.doc_number || 'DN03',
+      doc_number: form.doc_number || genDocNumber(),
+      doc_date: form.doc_date || null,
       company_name: form.company_name, address: form.address, tax_code: form.tax_code,
+      amount: (form.amount != null && form.amount !== '') ? Number(form.amount) : null,
       order_desc: form.order_desc, notes: form.notes, show_items: !!form.show_items, items,
     }
     const runSave = async (pl) => {
@@ -111,8 +130,24 @@ export default function PaymentRequest() {
     if (res.error) { alert('Lưu thất bại: ' + res.error.message); return }
     const saved = res.data || payload
     setOpen(false); load()
-    setTimeout(() => exportPaymentPDF(saved), 100)
+    setTimeout(() => exportPaymentPDF(toPdfData(saved)), 100)
   }
+
+  // Chuẩn hóa dữ liệu cho hàm xuất PDF
+  const toPdfData = (r) => ({
+    doc_number: r.doc_number,
+    created_at: r.doc_date || r.created_at || new Date().toISOString(),
+    company_name: r.company_name,
+    address: r.address,
+    tax_code: r.tax_code,
+    items: r.items || [],
+    use_vat: true,
+    vat_percent: 8,
+    amount: (r.amount != null && r.amount !== '') ? Number(r.amount) : null,
+    order_desc: r.order_desc || DEFAULT_PAYMENT_ORDER_DESC,
+    notes: r.notes || DEFAULT_PAYMENT_NOTES,
+    show_items: r.show_items !== false,
+  })
 
   const remove = async (id) => {
     if (!confirm('Xóa đề nghị thanh toán này?')) return
@@ -157,7 +192,7 @@ export default function PaymentRequest() {
                     <td className="px-4 py-3 text-ink-soft">{formatDate(r.created_at)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => exportPaymentPDF(r)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-brand" title="Xuất PDF"><ReceiptText size={15} /></button>
+                        <button onClick={() => exportPaymentPDF(toPdfData(r))} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-brand" title="Xuất PDF"><ReceiptText size={15} /></button>
                         <button onClick={() => openEdit(r)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-ink"><Pencil size={15} /></button>
                         <button onClick={() => remove(r.id)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-rose-600"><Trash2 size={15} /></button>
                       </div>
@@ -174,8 +209,13 @@ export default function PaymentRequest() {
         <div className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="label-field">Số chứng từ</label>
-              <input className="input-field" value={form.doc_number} onChange={set('doc_number')} placeholder="DN03" />
+              <label className="label-field">Số đề nghị thanh toán</label>
+              <input className="input-field" value={form.doc_number} onChange={set('doc_number')} placeholder="001/2026/VNF-DNTT" />
+              <p className="mt-1 text-[11px] text-ink-faint">Cú pháp: 001/2026/VNF-DNTT — tự tăng dần, có thể sửa.</p>
+            </div>
+            <div>
+              <label className="label-field">Ngày đề nghị thanh toán</label>
+              <input type="date" className="input-field" value={form.doc_date || ''} onChange={set('doc_date')} />
             </div>
             <div>
               <label className="label-field">Kính gửi (Công ty)</label>
@@ -184,17 +224,28 @@ export default function PaymentRequest() {
                 {customers.map((c, i) => <option key={i} value={c.company_name} />)}
               </datalist>
             </div>
-            <div className="sm:col-span-2">
-              <label className="label-field">Địa chỉ</label>
-              <input className="input-field" value={form.address} onChange={set('address')} />
-            </div>
             <div>
               <label className="label-field">MST khách hàng</label>
               <input className="input-field" value={form.tax_code} onChange={set('tax_code')} />
             </div>
             <div className="sm:col-span-2">
-              <label className="label-field">Nội dung (hiện ngay dưới tiêu đề) <span className="text-ink-faint">(có thể sửa)</span></label>
-              <textarea className="input-field min-h-[70px]" value={form.order_desc} onChange={set('order_desc')} placeholder="Căn cứ vào Hợp đồng số... giữa... và... ký ngày..." />
+              <label className="label-field">Địa chỉ</label>
+              <input className="input-field" value={form.address} onChange={set('address')} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label-field">Số tiền đề nghị thanh toán (VNĐ)</label>
+              <input type="number" className="input-field" value={form.amount} onChange={setAmount} placeholder="VD: 115000000" />
+              <p className="mt-1 text-[11px] text-ink-faint">
+                Nhập số tiền → tự điền "Bằng số" và "Bằng chữ" vào Nội dung chính bên dưới.
+                {form.amount !== '' && form.amount != null && (
+                  <span className="italic"> ({docSoThanhChu(Number(form.amount) || 0).replace(/\.$/, '')})</span>
+                )}
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label-field">Nội dung / Lý do đề nghị thanh toán <span className="text-ink-faint">(có thể sửa)</span></label>
+              <textarea className="input-field min-h-[70px]" value={form.order_desc} onChange={set('order_desc')} placeholder="Căn cứ hợp đồng số {hd} giữa ... và {buyer}." />
+              <p className="mt-1 text-[11px] text-ink-faint">Dùng {'{hd}'} = số hợp đồng, {'{buyer}'} = tên khách hàng — sẽ tự thay khi xuất.</p>
             </div>
           </div>
 
@@ -228,7 +279,7 @@ export default function PaymentRequest() {
                       <input className="input-field py-1.5 text-sm" value={it.unit} onChange={(e) => setItem(i, 'unit', e.target.value)} placeholder="Đơn vị" />
                     </div>
                     <div className="sm:col-span-2">
-                      <input type="number" className="input-field py-1.5 text-sm" value={it.price} onChange={(e) => setItem(i, 'price', e.target.value)} placeholder="Đơn giá (đã VAT)" />
+                      <input type="number" className="input-field py-1.5 text-sm" value={it.price} onChange={(e) => setItem(i, 'price', e.target.value)} placeholder="Đơn giá (chưa VAT)" />
                     </div>
                     <div className="flex items-center justify-end sm:col-span-1">
                       <button onClick={() => removeItem(i)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-rose-600"><X size={15} /></button>
@@ -244,9 +295,12 @@ export default function PaymentRequest() {
 
           {/* Nội dung chính */}
           <div>
-            <label className="label-field">Nội dung chính <span className="text-ink-faint">(có thể sửa · **đậm** · *nghiêng*)</span></label>
+            <div className="mb-1 flex items-center justify-between">
+              <label className="label-field mb-0">Nội dung chính <span className="text-ink-faint">(có thể sửa tự do)</span></label>
+              <button type="button" onClick={() => setForm((f) => ({ ...f, notes: DEFAULT_PAYMENT_NOTES }))} className="text-xs font-semibold text-brand hover:underline">↺ Khôi phục mẫu mặc định</button>
+            </div>
             <textarea className="input-field min-h-[200px] text-sm" value={form.notes} onChange={set('notes')} />
-            <p className="mt-1 text-[11px] text-ink-faint">Mẹo: bọc chữ trong <b>**hai dấu sao**</b> để in đậm, <i>*một dấu sao*</i> để in nghiêng.</p>
+            <p className="mt-1 text-[11px] text-ink-faint">"Bằng số" và "Bằng chữ" tự điền theo số tiền ở trên; bạn vẫn có thể sửa tay tại đây.</p>
           </div>
         </div>
 

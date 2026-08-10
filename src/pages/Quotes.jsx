@@ -65,12 +65,18 @@ function tierUnitPrice(src, qty) {
 
 // Lưu ý mặc định — user có thể sửa trong giao diện
 const DEFAULT_NOTES = [
-  '- Đơn giá đã bao gồm thuế VAT, phí vận chuyển, chi phí in logo theo yêu cầu của quý khách',
+  '- Đơn giá trên đã bao gồm thuế VAT.',
   '- Chính sách bảo hành chính hãng 12 tháng.',
-  '- Đối với đơn hàng số lượng lớn hơn, vui lòng liên hệ chúng tôi để có giá tốt hơn.',
   '- Báo giá có giá trị trong vòng 15 ngày.',
-  '- Liên hệ: Ms Nhật Lệ - Corporate Sales Manager: 0974 626 720',
+  '- Thông tin liên hệ: Ms Nhật Lệ (Corporate Sales Manager): Mobile/Zalo: 0974 626 720.',
 ].join('\n')
+
+// Các gói bao bì, đóng gói mặc định — user có thể sửa nội dung trong giao diện
+const PACKAGING_PRESETS = {
+  Standard: '- Hộp mặc định của sản phẩm\n- In logo lên sản phẩm tại 1 vị trí theo yêu cầu',
+  Corporate: '- Hộp cứng\n- Sleeve in thiết kế và logo doanh nghiệp\n- In logo lên sản phẩm tại 1 vị trí theo yêu cầu',
+  Premium: '- Hộp cứng nam châm cao cấp\n- Sleeve in thiết kế và logo doanh nghiệp\n- In logo lên sản phẩm tại 1 vị trí theo yêu cầu',
+}
 
 // Lời mở đầu mặc định — user có thể sửa trong giao diện
 const DEFAULT_INTRO = 'Cảm ơn Quý Công ty đã quan tâm và dành thời gian trao đổi với chúng tôi về các sản phẩm của Yokool. Chúng tôi xin được giới thiệu chi tiết sản phẩm kèm báo giá. Rất mong có cơ hội được hợp tác với Quý Công ty!'
@@ -80,6 +86,8 @@ const EMPTY = {
   contact_person: '', contact_email: '', valid_until: '',
   vat_percent: 8, is_comparison: false,
   intro: DEFAULT_INTRO,
+  packaging_tier: 'Standard',
+  packaging_text: PACKAGING_PRESETS.Standard,
   notes: DEFAULT_NOTES,
   items: [newItem()],
 }
@@ -142,7 +150,7 @@ export default function Quotes() {
   }
   const openEdit = (r) => {
     const items = (r.items?.length ? r.items : [newItem()]).map((it) => ({ ...newItem(), ...it }))
-    setForm({ ...EMPTY, ...r, intro: r.intro || DEFAULT_INTRO, notes: r.notes || DEFAULT_NOTES, items }); setEditId(r.id); setOpen(true)
+    setForm({ ...EMPTY, ...r, intro: r.intro || DEFAULT_INTRO, notes: r.notes || DEFAULT_NOTES, packaging_tier: r.packaging_tier || 'Standard', packaging_text: r.packaging_text || PACKAGING_PRESETS[r.packaging_tier || 'Standard'], items }); setEditId(r.id); setOpen(true)
   }
 
   // Thành tiền mỗi dòng CHƯA VAT; VAT tính chung theo vat_percent của báo giá
@@ -173,6 +181,8 @@ export default function Quotes() {
       vat_percent: Number(form.vat_percent) || 0, discount: 0,
       is_comparison: isComparison,
       intro: form.intro, notes: form.notes, valid_until: form.valid_until || null,
+      packaging_tier: form.packaging_tier || 'Standard',
+      packaging_text: form.packaging_text || '',
     }
     let saved
     const runSave = async (pl) => {
@@ -328,6 +338,29 @@ export default function Quotes() {
                   lineTotal={lineTotal(it)} />
               ))}
             </div>
+          </div>
+
+          {/* Tùy chọn bao bì, đóng gói — hiện dưới bảng giá, trên phần lưu ý */}
+          <div>
+            <label className="label-field">Tùy chọn bao bì, đóng gói <span className="text-ink-faint">(hiện dưới bảng giá — chọn gói & sửa nội dung)</span></label>
+            <div className="mb-2 flex gap-2">
+              {['Standard', 'Corporate', 'Premium'].map((tier) => (
+                <button
+                  key={tier}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, packaging_tier: tier, packaging_text: PACKAGING_PRESETS[tier] }))}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${form.packaging_tier === tier ? 'bg-brand text-white' : 'bg-brand-50 text-brand hover:bg-brand-100'}`}
+                >
+                  {tier}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, packaging_text: PACKAGING_PRESETS[f.packaging_tier || 'Standard'] }))}
+                className="ml-auto text-xs font-semibold text-brand hover:underline"
+              >↺ Khôi phục nội dung gói</button>
+            </div>
+            <textarea className="input-field min-h-[90px]" value={form.packaging_text} onChange={set('packaging_text')} placeholder="Mỗi dòng một mục, bắt đầu bằng dấu -" />
           </div>
 
           {/* Lưu ý (gộp ghi chú + lưu ý, hiện dưới bảng trên báo giá) */}

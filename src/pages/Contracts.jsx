@@ -32,19 +32,13 @@ const EMPTY = {
   seller: { ...DEFAULT_SELLER },
   items: [newLine()],
   use_vat: true, vat_percent: 8,
-  quality_terms_text: [
-    'Màu sắc: Đen, có in logo theo yêu cầu của bên A.',
-    'Hàng mới 100%, đảm bảo chất lượng.',
-    'Đủ số lượng, đúng màu sắc.',
-    'Thời gian bảo hành: 12 tháng.',
-    'Quy cách in logo và đóng gói theo bản Phụ lục của hợp đồng này.',
-  ].join('\n'),
   advance_percent: 70,
   delivery_time: 'không muộn hơn ngày ……/……/……',
   delivery_address: '',
   shipping_by: 'Chi phí vận chuyển do Bên B chịu.',
   // Nội dung tùy chỉnh các điều khoản — điền sẵn mặc định, sửa trực tiếp trong ô
   clause_1_2: DEFAULT_CLAUSES.clause_1_2,
+  clause_1_3: DEFAULT_CLAUSES.clause_1_3,
   clause_1_4: DEFAULT_CLAUSES.clause_1_4,
   clause_1_5: DEFAULT_CLAUSES.clause_1_5,
   clause_2_4: DEFAULT_CLAUSES.clause_2_4,
@@ -133,13 +127,12 @@ export default function Contracts() {
     f.buyer = { ...EMPTY.buyer, ...(r.buyer || {}) }
     f.seller = { ...DEFAULT_SELLER, ...(r.seller || {}) }
     f.items = (r.items?.length ? r.items : [newLine()]).map((it) => ({ ...newLine(), ...it }))
-    f.quality_terms_text = Array.isArray(r.quality_terms) ? r.quality_terms.join('\n') : (r.quality_terms_text || EMPTY.quality_terms_text)
     f.appendix_sections = (r.appendix_sections?.length ? r.appendix_sections : EMPTY.appendix_sections)
     f.payment_notes = r.payment_notes || DEFAULT_PAYMENT_NOTES
     f.payment_order_desc = r.payment_order_desc || DEFAULT_PAYMENT_ORDER_DESC
     f.payment_amount = r.payment_amount != null ? r.payment_amount : ''
     // clause: nếu bản ghi có nội dung thì dùng, nếu không thì điền mặc định để sửa trực tiếp
-    ;['clause_1_2', 'clause_1_4', 'clause_1_5', 'clause_2_4', 'clause_3_3', 'clause_3_4'].forEach((k) => { f[k] = r[k] || DEFAULT_CLAUSES[k] })
+    ;['clause_1_2', 'clause_1_3', 'clause_1_4', 'clause_1_5', 'clause_2_4', 'clause_3_3', 'clause_3_4'].forEach((k) => { f[k] = r[k] || DEFAULT_CLAUSES[k] })
     f.clause_3_1 = r.clause_3_1 || ''
     setForm(f); setEditId(r.id); setTab('contract'); setOpen(true)
   }
@@ -210,7 +203,6 @@ export default function Contracts() {
 
   const buildData = () => ({
     ...form,
-    quality_terms: form.quality_terms_text.split('\n').map((s) => s.trim()).filter(Boolean),
     items: form.items.filter((it) => it.name).map((it) => ({
       code: it.code || '', name: it.name, unit: it.unit || 'Cái', color: it.color || '',
       qty: Number(it.qty) || 0, price: Number(it.price) || 0,
@@ -235,12 +227,12 @@ export default function Contracts() {
       items: data.items,
       use_vat: !!form.use_vat,
       vat_percent: Number(form.vat_percent) || 0,
-      quality_terms: data.quality_terms,
       advance_percent: Number(form.advance_percent) || 0,
       delivery_time: form.delivery_time,
       delivery_address: form.delivery_address,
       shipping_by: form.shipping_by,
       clause_1_2: form.clause_1_2 || null,
+      clause_1_3: form.clause_1_3 || null,
       clause_1_4: form.clause_1_4 || null,
       clause_1_5: form.clause_1_5 || null,
       clause_2_4: form.clause_2_4 || null,
@@ -279,7 +271,7 @@ export default function Contracts() {
     }
     setSaving(false)
     if (res.error) { alert('Lưu thất bại: ' + res.error.message); return null }
-    return { ...form, ...(res.data || payload), id: (res.data?.id || editId), quality_terms: data.quality_terms, items: data.items }
+    return { ...form, ...(res.data || payload), id: (res.data?.id || editId), items: data.items }
   }
 
   const toWarehouseData = (saved) => ({
@@ -327,7 +319,7 @@ export default function Contracts() {
     if (!saved) return
     setOpen(false); load()
     setTimeout(() => {
-      if (kind === 'contract') exportContractPDF({ ...saved, quality_terms: saved.quality_terms })
+      if (kind === 'contract') exportContractPDF(saved)
       else if (kind === 'warehouse') exportWarehousePDF(toWarehouseData(saved))
       else if (kind === 'delivery') exportDeliveryPDF(toWarehouseData(saved))
       else if (kind === 'payment') exportPaymentPDF(toPaymentData(saved))
@@ -491,8 +483,8 @@ export default function Contracts() {
             </div>
 
             <div>
-              <label className="label-field">Điều 1.2 — Chất lượng, quy cách, bảo hành <span className="text-ink-faint">(mỗi dòng 1 gạch đầu dòng)</span></label>
-              <textarea className="input-field h-28 text-sm" value={form.quality_terms_text} onChange={set('quality_terms_text')} />
+              <label className="label-field">Điều 1.3 — Tình trạng, bảo hành, quy cách <span className="text-ink-faint">(mỗi dòng 1 mục)</span></label>
+              <textarea className="input-field h-28 text-sm" value={form.clause_1_3} onChange={set('clause_1_3')} />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -509,7 +501,7 @@ export default function Contracts() {
             <fieldset className="rounded-xl border border-paper-line p-4">
               <legend className="flex items-center gap-2 px-2 text-sm font-semibold text-ink">
                 Nội dung các điều khoản <span className="font-normal text-ink-faint">(sửa trực tiếp trong ô)</span>
-                <button type="button" onClick={() => setForm((f) => ({ ...f, clause_1_2: DEFAULT_CLAUSES.clause_1_2, clause_1_4: DEFAULT_CLAUSES.clause_1_4, clause_1_5: DEFAULT_CLAUSES.clause_1_5, clause_2_4: DEFAULT_CLAUSES.clause_2_4, clause_3_3: DEFAULT_CLAUSES.clause_3_3, clause_3_4: DEFAULT_CLAUSES.clause_3_4 }))} className="text-xs font-semibold text-brand hover:underline">↺ Khôi phục mặc định</button>
+                <button type="button" onClick={() => setForm((f) => ({ ...f, clause_1_2: DEFAULT_CLAUSES.clause_1_2, clause_1_3: DEFAULT_CLAUSES.clause_1_3, clause_1_4: DEFAULT_CLAUSES.clause_1_4, clause_1_5: DEFAULT_CLAUSES.clause_1_5, clause_2_4: DEFAULT_CLAUSES.clause_2_4, clause_3_3: DEFAULT_CLAUSES.clause_3_3, clause_3_4: DEFAULT_CLAUSES.clause_3_4 }))} className="text-xs font-semibold text-brand hover:underline">↺ Khôi phục mặc định</button>
               </legend>
               <div className="space-y-3">
                 <div><label className="label-field">Điều 1.2 — Đơn giá đã bao gồm</label><textarea className="input-field h-20 text-sm leading-relaxed" value={form.clause_1_2} onChange={set('clause_1_2')} /></div>
