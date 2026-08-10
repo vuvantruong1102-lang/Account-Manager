@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { formatVND, formatDate } from '../lib/constants'
 import { Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
 import { exportQuotePDF } from '../lib/quotePdf'
+import { exportQuoteDOCX } from '../lib/docxExport'
 
 // Mỗi dòng báo giá: có thể là sản phẩm hoặc set quà.
 // kind: 'product' | 'set'
@@ -273,6 +274,7 @@ export default function Quotes() {
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex justify-end gap-1">
                         <button onClick={() => exportQuotePDF(r)} className="flex items-center gap-1 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-semibold text-brand hover:bg-brand-100"><FileDown size={14} /> PDF</button>
+                        <button onClick={() => exportQuoteDOCX(r)} className="flex items-center gap-1 rounded-lg bg-sky-50 px-2.5 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100"><FileDown size={14} /> Word</button>
                         <button onClick={() => openEdit(r)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-ink"><Pencil size={15} /></button>
                         <button onClick={() => remove(r.id)} className="rounded-lg p-2 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><Trash2 size={15} /></button>
                       </div>
