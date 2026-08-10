@@ -41,6 +41,11 @@ const EMPTY = {
   clause_1_3: DEFAULT_CLAUSES.clause_1_3,
   clause_1_4: DEFAULT_CLAUSES.clause_1_4,
   clause_1_5: DEFAULT_CLAUSES.clause_1_5,
+  clause_2_1: DEFAULT_CLAUSES.clause_2_1,
+  clause_2_2_intro: DEFAULT_CLAUSES.clause_2_2_intro,
+  clause_2_2_a: DEFAULT_CLAUSES.clause_2_2_a,
+  clause_2_2_b: DEFAULT_CLAUSES.clause_2_2_b,
+  clause_2_3_intro: DEFAULT_CLAUSES.clause_2_3_intro,
   clause_2_4: DEFAULT_CLAUSES.clause_2_4,
   clause_3_1: '',
   clause_3_3: DEFAULT_CLAUSES.clause_3_3,
@@ -126,13 +131,18 @@ export default function Contracts() {
     Object.assign(f, r)
     f.buyer = { ...EMPTY.buyer, ...(r.buyer || {}) }
     f.seller = { ...DEFAULT_SELLER, ...(r.seller || {}) }
-    f.items = (r.items?.length ? r.items : [newLine()]).map((it) => ({ ...newLine(), ...it }))
+    f.items = (r.items?.length ? r.items : [newLine()]).map((it) => {
+      const merged = { ...newLine(), ...it }
+      // Chuẩn hóa màu về Trắng/Đen (mặc định Đen nếu giá trị lạ)
+      merged.color = /trắng|white/i.test(merged.color || '') ? 'Trắng' : 'Đen'
+      return merged
+    })
     f.appendix_sections = (r.appendix_sections?.length ? r.appendix_sections : EMPTY.appendix_sections)
     f.payment_notes = r.payment_notes || DEFAULT_PAYMENT_NOTES
     f.payment_order_desc = r.payment_order_desc || DEFAULT_PAYMENT_ORDER_DESC
     f.payment_amount = r.payment_amount != null ? r.payment_amount : ''
     // clause: nếu bản ghi có nội dung thì dùng, nếu không thì điền mặc định để sửa trực tiếp
-    ;['clause_1_2', 'clause_1_3', 'clause_1_4', 'clause_1_5', 'clause_2_4', 'clause_3_3', 'clause_3_4'].forEach((k) => { f[k] = r[k] || DEFAULT_CLAUSES[k] })
+    ;['clause_1_2', 'clause_1_3', 'clause_1_4', 'clause_1_5', 'clause_2_1', 'clause_2_2_intro', 'clause_2_2_a', 'clause_2_2_b', 'clause_2_3_intro', 'clause_2_4', 'clause_3_3', 'clause_3_4'].forEach((k) => { f[k] = r[k] || DEFAULT_CLAUSES[k] })
     f.clause_3_1 = r.clause_3_1 || ''
     setForm(f); setEditId(r.id); setTab('contract'); setOpen(true)
   }
@@ -235,6 +245,11 @@ export default function Contracts() {
       clause_1_3: form.clause_1_3 || null,
       clause_1_4: form.clause_1_4 || null,
       clause_1_5: form.clause_1_5 || null,
+      clause_2_1: form.clause_2_1 || null,
+      clause_2_2_intro: form.clause_2_2_intro || null,
+      clause_2_2_a: form.clause_2_2_a || null,
+      clause_2_2_b: form.clause_2_2_b || null,
+      clause_2_3_intro: form.clause_2_3_intro || null,
       clause_2_4: form.clause_2_4 || null,
       clause_3_1: form.clause_3_1 || null,
       clause_3_3: form.clause_3_3 || null,
@@ -458,7 +473,12 @@ export default function Contracts() {
                         )}
                       </div>
                       <div className="sm:col-span-1"><input className="input-field py-1.5 text-sm" value={it.unit} onChange={(e) => setItem(i, 'unit', e.target.value)} placeholder="ĐVT" /></div>
-                      <div className="sm:col-span-1"><input className="input-field py-1.5 text-sm" value={it.color} onChange={(e) => setItem(i, 'color', e.target.value)} placeholder="Màu" /></div>
+                      <div className="sm:col-span-1">
+                        <select className="input-field py-1.5 text-sm" value={it.color || 'Đen'} onChange={(e) => setItem(i, 'color', e.target.value)}>
+                          <option value="Đen">Đen</option>
+                          <option value="Trắng">Trắng</option>
+                        </select>
+                      </div>
                       <div className="sm:col-span-1"><input type="number" className="input-field py-1.5 text-sm" value={it.qty} onChange={(e) => setItem(i, 'qty', e.target.value)} placeholder="SL" /></div>
                       <div className="sm:col-span-2"><input type="number" className="input-field py-1.5 text-sm" value={it.price} onChange={(e) => setItem(i, 'price', e.target.value)} placeholder="Đơn giá" /></div>
                       <div className="sm:col-span-3 flex items-center justify-between">
@@ -501,12 +521,17 @@ export default function Contracts() {
             <fieldset className="rounded-xl border border-paper-line p-4">
               <legend className="flex items-center gap-2 px-2 text-sm font-semibold text-ink">
                 Nội dung các điều khoản <span className="font-normal text-ink-faint">(sửa trực tiếp trong ô)</span>
-                <button type="button" onClick={() => setForm((f) => ({ ...f, clause_1_2: DEFAULT_CLAUSES.clause_1_2, clause_1_3: DEFAULT_CLAUSES.clause_1_3, clause_1_4: DEFAULT_CLAUSES.clause_1_4, clause_1_5: DEFAULT_CLAUSES.clause_1_5, clause_2_4: DEFAULT_CLAUSES.clause_2_4, clause_3_3: DEFAULT_CLAUSES.clause_3_3, clause_3_4: DEFAULT_CLAUSES.clause_3_4 }))} className="text-xs font-semibold text-brand hover:underline">↺ Khôi phục mặc định</button>
+                <button type="button" onClick={() => setForm((f) => ({ ...f, clause_1_2: DEFAULT_CLAUSES.clause_1_2, clause_1_3: DEFAULT_CLAUSES.clause_1_3, clause_1_4: DEFAULT_CLAUSES.clause_1_4, clause_1_5: DEFAULT_CLAUSES.clause_1_5, clause_2_1: DEFAULT_CLAUSES.clause_2_1, clause_2_2_intro: DEFAULT_CLAUSES.clause_2_2_intro, clause_2_2_a: DEFAULT_CLAUSES.clause_2_2_a, clause_2_2_b: DEFAULT_CLAUSES.clause_2_2_b, clause_2_3_intro: DEFAULT_CLAUSES.clause_2_3_intro, clause_2_4: DEFAULT_CLAUSES.clause_2_4, clause_3_3: DEFAULT_CLAUSES.clause_3_3, clause_3_4: DEFAULT_CLAUSES.clause_3_4 }))} className="text-xs font-semibold text-brand hover:underline">↺ Khôi phục mặc định</button>
               </legend>
               <div className="space-y-3">
                 <div><label className="label-field">Điều 1.2 — Đơn giá đã bao gồm</label><textarea className="input-field h-20 text-sm leading-relaxed" value={form.clause_1_2} onChange={set('clause_1_2')} /></div>
                 <div><label className="label-field">Điều 1.4 — Sản xuất & duyệt mẫu</label><textarea className="input-field h-28 text-sm leading-relaxed" value={form.clause_1_4} onChange={set('clause_1_4')} /></div>
                 <div><label className="label-field">Điều 1.5 — Bảo hành</label><textarea className="input-field h-16 text-sm leading-relaxed" value={form.clause_1_5} onChange={set('clause_1_5')} /></div>
+                <div><label className="label-field">Điều 2.1 — Tổng giá trị thanh toán <span className="text-ink-faint">(giữ {'{tong}'} {'{bangchu}'} {'{vat}'} để tự điền số)</span></label><textarea className="input-field h-16 text-sm leading-relaxed" value={form.clause_2_1} onChange={set('clause_2_1')} /></div>
+                <div><label className="label-field">Điều 2.2 — Câu mở đầu</label><textarea className="input-field h-12 text-sm leading-relaxed" value={form.clause_2_2_intro} onChange={set('clause_2_2_intro')} /></div>
+                <div><label className="label-field">Điều 2.2 a) — Lần 1 <span className="text-ink-faint">(giữ {'{pct1}'} {'{amt1}'} {'{bangchu1}'})</span></label><textarea className="input-field h-24 text-sm leading-relaxed" value={form.clause_2_2_a} onChange={set('clause_2_2_a')} /></div>
+                <div><label className="label-field">Điều 2.2 b) — Lần 2 <span className="text-ink-faint">(giữ {'{pct2}'} {'{amt2}'} {'{bangchu2}'})</span></label><textarea className="input-field h-24 text-sm leading-relaxed" value={form.clause_2_2_b} onChange={set('clause_2_2_b')} /></div>
+                <div><label className="label-field">Điều 2.3 — Câu mở đầu <span className="text-ink-faint">(số TK/ngân hàng tự lấy từ Bên B)</span></label><textarea className="input-field h-12 text-sm leading-relaxed" value={form.clause_2_3_intro} onChange={set('clause_2_3_intro')} /></div>
                 <div><label className="label-field">Điều 2.4 — Nghĩa vụ thanh toán</label><textarea className="input-field h-24 text-sm leading-relaxed" value={form.clause_2_4} onChange={set('clause_2_4')} /></div>
                 <div><label className="label-field">Điều 3.1 — Điều kiện giao hàng (đầy đủ)</label><textarea className="input-field h-20 text-sm leading-relaxed" value={form.clause_3_1} onChange={set('clause_3_1')} placeholder="Để trống sẽ tự ghép từ 'Thời gian giao hàng' ở trên. Nhập vào đây nếu muốn thay toàn bộ câu 3.1." /></div>
                 <div><label className="label-field">Điều 3.3 — Nghiệm thu khi giao</label><textarea className="input-field h-28 text-sm leading-relaxed" value={form.clause_3_3} onChange={set('clause_3_3')} /></div>
