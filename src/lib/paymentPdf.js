@@ -42,12 +42,30 @@ const fmtDate = (d) => {
 }
 const imgFmt = (url) => (url && url.startsWith('data:image/png')) ? 'PNG' : 'JPEG'
 
-// In nghiêng thật (font Times có bộ Italic riêng)
-function italicText(doc, txt, x, y, opts) {
+// In nghiêng thật bằng ma trận nghiêng (skew) — Roboto không có bộ glyph Italic riêng
+function italicText(doc, txt, x, y, opts = {}) {
   const prev = doc.getFont()
   const bold = /bold/i.test(prev.fontStyle || '')
-  doc.setFont('Roboto', bold ? 'bolditalic' : 'italic')
-  doc.text(txt, x, y, opts)
+  doc.setFont('Roboto', bold ? 'bold' : 'normal')
+  const size = doc.getFontSize()
+  // Căn chỉnh vị trí x theo align
+  let drawX = x
+  if (opts.align === 'center' || opts.align === 'right') {
+    const w = doc.getTextWidth(txt)
+    drawX = opts.align === 'center' ? x - w / 2 : x - w
+  }
+  const shear = 0.28 // độ nghiêng (~15.6°)
+  try {
+    doc.saveGraphicsState()
+    // Ma trận: [1, 0, shear, 1, e, f] nghiêng chữ theo trục ngang quanh baseline y
+    const f = new doc.Matrix(1, 0, shear, 1, drawX - shear * y, y)
+    doc.setCurrentTransformationMatrix(f)
+    doc.text(txt, 0, 0)
+    doc.restoreGraphicsState()
+  } catch (e) {
+    // Nếu môi trường không hỗ trợ ma trận, fallback in thẳng
+    doc.text(txt, drawX, y)
+  }
   doc.setFont('Roboto', prev.fontStyle || 'normal')
 }
 
@@ -154,8 +172,8 @@ export function exportPaymentPDF(req) {
   doc.text('GIẤY ĐỀ NGHỊ THANH TOÁN', W / 2, y, { align: 'center' })
   y += 6.5
   doc.setFont('Roboto', 'bold').setFontSize(12.5).setTextColor(...INK)
-  doc.text(`Số ${req.doc_number || 'DN03'}`, W / 2, y, { align: 'center' })
-  doc.setTextColor(...INK)
+  italicText(doc, `Số ${req.doc_number || 'DN03'}`, W / 2, y, { align: 'center' })
+  doc.setFont('Roboto', 'normal').setTextColor(...INK)
 
   // Kính gửi (khách hàng)
   y += 16

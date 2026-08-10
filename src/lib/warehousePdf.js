@@ -120,8 +120,8 @@ export function exportWarehousePDF(data) {
     body: sumRows,
     margin: { left: M, right: M },
     theme: 'grid',
-    styles: { font: 'Roboto', fontSize: 9, cellPadding: 2, textColor: INK, lineColor: [150, 150, 150], lineWidth: 0.2 },
-    columnStyles: { 0: { halign: 'right' }, 1: { halign: 'right', cellWidth: 40 } },
+    styles: { font: 'Roboto', fontSize: 9, cellPadding: { top: 2, bottom: 2, left: 2, right: 8 }, textColor: INK, lineColor: [150, 150, 150], lineWidth: 0.2 },
+    columnStyles: { 0: { halign: 'right' }, 1: { halign: 'right', cellWidth: 40, cellPadding: { top: 2, bottom: 2, left: 2, right: 2 } } },
   })
   y = doc.lastAutoTable.finalY + 7
 
@@ -135,12 +135,12 @@ export function exportWarehousePDF(data) {
   y += 6
   doc.text('Số chứng từ gốc kèm theo: ...', M, y)
 
-  // Ngày + 3 chữ ký
+  // Ngày + 3 chữ ký (ngày căn giữa cột Giám đốc)
   y += 10
-  doc.setFont('Roboto', 'normal').setFontSize(9.5)
-  doc.text(`Ngày ${dt.d} tháng ${String(dt.m).padStart(2, '0')} năm ${dt.y}`, W - M, y, { align: 'right' })
-  y += 8
   const col = [W * 0.22, W * 0.5, W * 0.78]
+  doc.setFont('Roboto', 'normal').setFontSize(9.5)
+  doc.text(`Ngày ${dt.d} tháng ${String(dt.m).padStart(2, '0')} năm ${dt.y}`, col[2], y, { align: 'center' })
+  y += 8
   doc.setFont('Roboto', 'bold').setFontSize(9.5)
   doc.text('Người mua hàng', col[0], y, { align: 'center' })
   doc.text('Kế toán trưởng', col[1], y, { align: 'center' })
