@@ -75,11 +75,15 @@ export function exportWarehousePDF(data) {
   const items = data.items || []
   const useVat = !!data.use_vat
   const vatRate = Number(data.vat_percent) || 0
-  // Khử sai số làm tròn nhỏ (<=3đ) do đơn giá chia ngược; đơn hàng cố ý lẻ vẫn giữ nguyên
+  // Làm tròn: gần bội số 1.000 (chênh <=3đ) thì lấy bội số 1.000, ngược lại giữ nguyên
   const roundTiny = (n) => {
     const near1000 = Math.round(n / 1000) * 1000
     return Math.abs(n - near1000) <= 3 ? near1000 : Math.round(n)
   }
+  // Đơn giá CÓ VAT/đơn vị làm tròn trước, rồi nhân số lượng (không làm tròn thêm)
+  const vatMul = useVat ? (1 + vatRate / 100) : 1
+  const unitVat = (it) => roundTiny((Number(it.price) || 0) * vatMul)
+  const lineVatTotal = (it) => unitVat(it) * (Number(it.qty) || 0)
   const lineTotal = (it) => Math.round((Number(it.qty) || 0) * (Number(it.price) || 0))
   const body = items.map((it, i) => {
     const price = Number(it.price) || 0
@@ -87,8 +91,7 @@ export function exportWarehousePDF(data) {
     return [String(i + 1), it.code || '', it.name || '', it.unit || '', fmt(qty), fmt(price), fmt(lineTotal(it))]
   })
   const sub = items.reduce((s, it) => s + lineTotal(it), 0)
-  const vatExact = useVat ? sub * vatRate / 100 : 0
-  const total = roundTiny(sub + vatExact)
+  const total = items.reduce((s, it) => s + lineVatTotal(it), 0)
   const vat = total - sub
 
   autoTable(doc, {

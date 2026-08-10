@@ -191,8 +191,8 @@ export function exportPaymentPDF(req) {
     const near1000 = Math.round(n / 1000) * 1000
     return Math.abs(n - near1000) <= 3 ? near1000 : Math.round(n)
   }
-  const unitVat = (it) => Math.round((Number(it.price) || 0) * vatMul)          // đơn giá có VAT (tròn)
-  const lineVat = (it) => roundTiny((Number(it.qty) || 0) * (Number(it.price) || 0) * vatMul) // thành tiền có VAT (tròn)
+  const unitVat = (it) => roundTiny((Number(it.price) || 0) * vatMul)   // đơn giá có VAT, làm tròn (về bội 1.000 nếu gần)
+  const lineVat = (it) => unitVat(it) * (Number(it.qty) || 0)           // thành tiền = đơn giá(VAT,tròn) × SL, không làm tròn thêm
   const total = items.reduce((s, it) => s + lineVat(it), 0)
 
   if (showItems && items.length) {

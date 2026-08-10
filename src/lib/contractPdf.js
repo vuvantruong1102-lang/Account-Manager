@@ -151,18 +151,18 @@ export function exportContractPDF(data) {
   const items = data.items || []
   const vatRate = Number(data.vat_percent) || 0
   const useVat = data.use_vat !== false
-  const lineTotal = (it) => Math.round((Number(it.qty) || 0) * (Number(it.price) || 0))
-  const sub = items.reduce((s, it) => s + lineTotal(it), 0)
-  // VAT & tổng tính từ giá trị chính xác rồi khử sai số làm tròn nhỏ (<=2đ) do đơn giá chia ngược
+  // Làm tròn: nếu rất gần bội số 1.000 (chênh <=3đ) thì lấy bội số 1.000, ngược lại giữ nguyên (round)
   const roundTiny = (n) => {
-    const r = Math.round(n)
     const near1000 = Math.round(n / 1000) * 1000
-    // Nếu rất gần bội số 1000 (chênh <=2đ) thì lấy bội số 1000 cho "đẹp"
-    if (Math.abs(n - near1000) <= 3) return near1000
-    return r
+    return Math.abs(n - near1000) <= 3 ? near1000 : Math.round(n)
   }
-  const vatExact = useVat ? sub * vatRate / 100 : 0
-  const grand = roundTiny(sub + vatExact)
+  // Cách tính: đơn giá CÓ VAT/đơn vị được làm tròn trước, rồi nhân số lượng (không làm tròn thêm)
+  const vatMul = useVat ? (1 + vatRate / 100) : 1
+  const unitVat = (it) => roundTiny((Number(it.price) || 0) * vatMul)   // đơn giá đã có VAT, đã làm tròn
+  const lineVatTotal = (it) => unitVat(it) * (Number(it.qty) || 0)      // thành tiền có VAT = đơn giá(VAT,tròn) × SL
+  const lineTotal = (it) => Math.round((Number(it.qty) || 0) * (Number(it.price) || 0)) // thành tiền CHƯA VAT (hiển thị)
+  const sub = items.reduce((s, it) => s + lineTotal(it), 0)             // tổng chưa VAT
+  const grand = items.reduce((s, it) => s + lineVatTotal(it), 0)        // tổng có VAT (tròn theo per-unit)
   const vat = grand - sub
 
   const body = items.map((it, i) => [
