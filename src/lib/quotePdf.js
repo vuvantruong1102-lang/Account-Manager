@@ -21,11 +21,10 @@ const INTRO = 'Cảm ơn Quý Công ty đã quan tâm và dành thời gian trao
 
 // Lưu ý mặc định (dùng khi báo giá không có ghi chú riêng)
 const DEFAULT_NOTES = [
-  '- Đơn giá đã bao gồm thuế VAT, phí vận chuyển, chi phí in logo theo yêu cầu của quý khách',
+  '- Đơn giá trên đã bao gồm thuế VAT.',
   '- Chính sách bảo hành chính hãng 12 tháng.',
-  '- Đối với đơn hàng số lượng lớn hơn, vui lòng liên hệ chúng tôi để có giá tốt hơn.',
   '- Báo giá có giá trị trong vòng 15 ngày.',
-  '- Liên hệ: Ms Nhật Lệ - Corporate Sales Manager: 0974 626 720',
+  '- Thông tin liên hệ: Ms Nhật Lệ (Corporate Sales Manager): Mobile/Zalo: 0974 626 720.',
 ].join('\n')
 
 const SIGNER = { name: 'Vũ Văn Cường', title: 'Giám đốc' }
@@ -175,9 +174,27 @@ export function exportQuotePDF(quote) {
   }
   const afterTotalY = ty
 
+  // ===== Tùy chọn bao bì, đóng gói (dưới bảng giá, trên lưu ý) =====
+  let py = afterTotalY + 8
+  const pkgText = (quote.packaging_text && quote.packaging_text.trim()) ? quote.packaging_text.trim() : ''
+  if (pkgText) {
+    if (py + 30 > H) { doc.addPage(); py = 20 }
+    const tier = quote.packaging_tier || 'Standard'
+    doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
+    doc.text(`Tùy chọn bao bì, đóng gói: ${tier}`, M, py)
+    py += 5
+    doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
+    pkgText.split('\n').forEach((raw) => {
+      const lines = doc.splitTextToSize(raw, W - 2 * M - 55)
+      doc.text(lines, M, py)
+      py += lines.length * 4.5
+    })
+    py += 3
+  }
+
   // ===== Lưu ý (gộp ghi chú + lưu ý) =====
   const noteText = (quote.notes && quote.notes.trim()) ? quote.notes : DEFAULT_NOTES
-  let ny = afterTotalY + 8
+  let ny = py
   if (ny + 45 > H) { doc.addPage(); ny = 20 }
   doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
   doc.text('Lưu ý:', M, ny)

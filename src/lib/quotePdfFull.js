@@ -19,9 +19,10 @@ const SELLER = {
 }
 const SIGNER = { name: 'VŨ VĂN CƯỜNG', title: 'GIÁM ĐỐC' }
 const FOOTER_NOTE = [
-  'Đơn giá đã bao gồm thuế VAT, phí vận chuyển, in logo theo yêu cầu của khách hàng.',
+  'Đơn giá trên đã bao gồm thuế VAT.',
   'Chính sách bảo hành chính hãng 12 tháng.',
   'Báo giá có giá trị trong vòng 15 ngày.',
+  'Thông tin liên hệ: Ms Nhật Lệ (Corporate Sales Manager): Mobile/Zalo: 0974 626 720.',
 ]
 
 const fmt = (n) => (Number(n) || 0).toLocaleString('vi-VN')
@@ -180,10 +181,25 @@ export async function exportQuotePDFFull(quote, options = {}) {
     ty += 4
   }
 
-  // === Lưu ý ===
+  // === Tùy chọn bao bì, đóng gói (dưới bảng giá, trên lưu ý) ===
   let ny = ty + 8
-  // Nếu sắp tràn trang, sang trang mới
   const pageH = doc.internal.pageSize.getHeight()
+  const pkgText = (quote.packaging_text && quote.packaging_text.trim()) ? quote.packaging_text.trim() : ''
+  if (pkgText) {
+    if (ny + 30 > pageH) { doc.addPage(); ny = 14 }
+    const tier = quote.packaging_tier || 'Standard'
+    doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK)
+    doc.text(`Tùy chọn bao bì, đóng gói: ${tier}`, M, ny); ny += 5
+    doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)
+    pkgText.split('\n').forEach((raw) => {
+      const ls = doc.splitTextToSize(raw, W - 2 * M)
+      doc.text(ls, M, ny); ny += ls.length * 4.5
+    })
+    ny += 3
+  }
+
+  // === Lưu ý ===
+  // Nếu sắp tràn trang, sang trang mới
   if (ny + 40 > pageH) { doc.addPage(); ny = 14 }
   doc.setFont('Roboto', 'bold').setFontSize(9).setTextColor(...INK); doc.text('Lưu ý:', M, ny); ny += 5
   doc.setFont('Roboto', 'normal').setFontSize(8.5).setTextColor(...SOFT)

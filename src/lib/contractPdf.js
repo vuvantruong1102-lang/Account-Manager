@@ -19,8 +19,8 @@ export const DEFAULT_SELLER = {
 
 // Nội dung mặc định các điều khoản có thể tùy chỉnh (dùng chung cho form nhập & PDF)
 export const DEFAULT_CLAUSES = {
-  clause_1_2: 'Đơn giá nêu trên đã bao gồm chi phí in logo, hộp bán lẻ, đai giấy, đóng gói và vận chuyển đến địa điểm quy định tại Điều 3; đã bao gồm thuế GTGT.',
-  clause_1_3: 'Hàng hóa phải mới 100%, đúng model, số lượng, màu sắc, thông số và mẫu đã được Bên A xác nhận; hình thức nguyên vẹn, không có hư hỏng ảnh hưởng đến công năng. Logo và bao bì thực hiện theo Phụ lục số 01.',
+  clause_1_2: 'Đơn giá nêu trên đã bao gồm thuế GTGT và chi phí in logo theo yêu cầu của bên A.',
+  clause_1_3: 'Tình trạng hàng hóa: Hàng mới 100%, đảm bảo chất lượng.\nThời gian bảo hành: 12 tháng kể từ ngày giao nhận.\nQuy cách in logo và đóng gói: theo bản Phụ lục của hợp đồng này.',
   clause_1_4: 'Bên B chỉ sản xuất hàng loạt sau khi Bên A xác nhận mẫu qua văn bản, email, tin nhắn hoặc hình thức điện tử khác của người phụ trách. Mọi thay đổi sau khi duyệt mẫu phải được Bên B chấp thuận; Bên A chịu chi phí và thời gian phát sinh. Sai lệch nhỏ về sắc độ do vật liệu, mực in hoặc thiết bị hiển thị, nếu phù hợp với mẫu đã duyệt và không ảnh hưởng đáng kể đến hình thức, công năng, không được coi là lỗi.',
   clause_1_5: 'Hàng hóa được bảo hành 12 tháng kể từ ngày ký Biên bản giao nhận theo Điều 3 của Hợp đồng.',
   clause_2_4: 'Nghĩa vụ thanh toán hoàn thành khi tiền được ghi có vào tài khoản của Bên B. Nếu Bên A chậm thanh toán, Bên B có quyền tạm ngừng sản xuất hoặc giao hàng, điều chỉnh tiến độ tương ứng và yêu cầu lãi chậm trả theo Luật Thương mại cùng các chi phí hợp lý phát sinh trực tiếp.',
@@ -211,11 +211,10 @@ export function exportContractPDF(data) {
   para('1.2. ' + (data.clause_1_2 || DEFAULT_CLAUSES.clause_1_2), { gap: 2, lh: 4.8 })
 
   /* ---------- 1.3 ---------- */
-  const quality = data.quality_terms && data.quality_terms.length ? data.quality_terms : [
-    DEFAULT_CLAUSES.clause_1_3,
-  ]
-  para('1.3. ' + quality[0], { gap: 1.5, lh: 4.8 })
-  quality.slice(1).forEach((q) => para(q, { gap: 1, lh: 4.8, indent: 6 }))
+  const clause13 = (data.clause_1_3 || DEFAULT_CLAUSES.clause_1_3)
+  const q13Lines = clause13.split('\n').map((s) => s.trim()).filter(Boolean)
+  para('1.3. ' + (q13Lines[0] || ''), { gap: 1.5, lh: 4.8 })
+  q13Lines.slice(1).forEach((q) => para(q, { gap: 1, lh: 4.8, indent: 6 }))
 
   /* ---------- 1.4 ---------- */
   para('1.4. ' + (data.clause_1_4 || DEFAULT_CLAUSES.clause_1_4), { gap: 1.5, lh: 4.8 })
