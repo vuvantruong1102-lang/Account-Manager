@@ -27,11 +27,16 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        // Luôn ưu tiên bản mới nhất cho trang & tài nguyên; xóa cache cũ ngay khi có bản mới
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/.*/i,
-            handler: 'NetworkFirst',
-            options: { cacheName: 'supabase-api', expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 } },
+            // API Supabase (REST, Auth, Realtime): KHÔNG cache — luôn lấy dữ liệu mới,
+            // tránh hiện "Chưa có báo giá" do trả cache cũ/rỗng rồi mới cập nhật.
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            handler: 'NetworkOnly',
           },
         ],
       },
