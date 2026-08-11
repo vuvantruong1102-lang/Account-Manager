@@ -108,17 +108,25 @@ export default function Quotes() {
 
   const load = async () => {
     setLoading(true)
-    // Ưu tiên tải DANH SÁCH BÁO GIÁ trước — hiện ngay, không chờ dữ liệu phụ
-    const qr = await supabase.from('crm_quotes').select('*').order('created_at', { ascending: false })
+    // Danh sách chỉ lấy CỘT NHẸ (không lấy items/ảnh base64) -> tải nhanh.
+    // Dữ liệu đầy đủ (items, ảnh) chỉ tải khi bấm Sửa/PDF/Word từng báo giá.
+    const qr = await supabase
+      .from('crm_quotes')
+      .select('id, quote_number, company_name, tax_code, total_amount, vat_percent, created_at')
+      .order('created_at', { ascending: false })
     if (qr.error) {
       console.error('Lỗi tải báo giá:', qr.error.message)
-      // Không ghi đè rows thành rỗng khi lỗi — giữ dữ liệu cũ nếu có
+      // Fallback: nếu DB chưa có cột total_amount, lấy full như cũ để không vỡ
+      if (/total_amount/.test(qr.error.message)) {
+        const alt = await supabase.from('crm_quotes').select('*').order('created_at', { ascending: false })
+        if (!alt.error) setRows(alt.data || [])
+      }
     } else {
       setRows(qr.data || [])
     }
     setLoading(false)
 
-    // Dữ liệu phụ (sản phẩm, set quà, khách hàng) chỉ cần khi mở form — tải nền, không chặn UI
+    // Dữ liệu phụ (chỉ cần khi mở form) — tải nền, không chặn hiển thị
     const [pr, sr, cr] = await Promise.all([
       supabase.from('crm_products').select('*'),
       supabase.from('crm_gift_sets').select('*'),
@@ -159,12 +167,24 @@ export default function Quotes() {
     setForm({ ...EMPTY, quote_number: genNumber(), items: [newItem()] })
     setEditId(null); setOpen(true)
   }
-  const openEdit = (r) => {
-    const items = (r.items?.length ? r.items : [newItem()]).map((it) => ({ ...newItem(), ...it }))
-    setForm({ ...EMPTY, ...r, intro: r.intro || DEFAULT_INTRO, notes: r.notes || DEFAULT_NOTES, packaging_tier: r.packaging_tier || 'Tùy chọn', packaging_text: r.packaging_text || (r.packaging_tier && PACKAGING_PRESETS[r.packaging_tier] ? PACKAGING_PRESETS[r.packaging_tier] : ''), items }); setEditId(r.id); setOpen(true)
+  const openEdit = async (r) => {
+    // Bản ghi trong danh sách chỉ có cột nhẹ -> tải đầy đủ (items/ảnh) trước khi mở form
+    const full = (r.items != null) ? r : await fetchFull(r.id)
+    if (!full) return
+    const items = (full.items?.length ? full.items : [newItem()]).map((it) => ({ ...newItem(), ...it }))
+    setForm({ ...EMPTY, ...full, intro: full.intro || DEFAULT_INTRO, notes: full.notes || DEFAULT_NOTES, packaging_tier: full.packaging_tier || 'Tùy chọn', packaging_text: full.packaging_text || (full.packaging_tier && PACKAGING_PRESETS[full.packaging_tier] ? PACKAGING_PRESETS[full.packaging_tier] : ''), items }); setEditId(full.id); setOpen(true)
   }
 
   // Thành tiền mỗi dòng CHƯA VAT; VAT tính chung theo vat_percent của báo giá
+  // Tải ĐẦY ĐỦ 1 báo giá (kèm items/ảnh) — chỉ gọi khi Sửa/PDF/Word
+  const fetchFull = async (id) => {
+    const { data, error } = await supabase.from('crm_quotes').select('*').eq('id', id).single()
+    if (error) { alert('Không tải được báo giá: ' + error.message); return null }
+    return data
+  }
+  const doExportPDF = async (r) => { const full = await fetchFull(r.id); if (full) exportQuotePDF(full) }
+  const doExportDOCX = async (r) => { const full = await fetchFull(r.id); if (full) exportQuoteDOCX(full) }
+
   const calc = (f) => {
     const sub = (f.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0)
     const rate = Number(f.vat_percent) || 0
@@ -194,6 +214,7 @@ export default function Quotes() {
       intro: form.intro, notes: form.notes, valid_until: form.valid_until || null,
       packaging_tier: form.packaging_tier || 'Tùy chọn',
       packaging_text: form.packaging_text || '',
+      total_amount: Math.round(calc(form).total),
     }
     let saved
     const runSave = async (pl) => {
@@ -271,7 +292,7 @@ export default function Quotes() {
             </thead>
             <tbody>
               {rows.map((r) => {
-                const t = calc(r)
+                const totalDisplay = (r.total_amount != null) ? Number(r.total_amount) : calc(r).total
                 return (
                   <tr key={r.id} className="border-b border-paper-line last:border-0 hover:bg-paper/40">
                     <td className="px-5 py-3.5 font-mono text-xs font-semibold text-brand whitespace-nowrap">{r.quote_number}</td>
@@ -279,12 +300,12 @@ export default function Quotes() {
                       <p className="font-medium text-ink">{r.company_name}</p>
                       {r.tax_code && <p className="text-xs text-ink-faint">MST: {r.tax_code}</p>}
                     </td>
-                    <td className="px-5 py-3.5 font-semibold text-ink whitespace-nowrap">{formatVND(t.total)}</td>
+                    <td className="px-5 py-3.5 font-semibold text-ink whitespace-nowrap">{formatVND(totalDisplay)}</td>
                     <td className="px-5 py-3.5 text-ink-soft whitespace-nowrap">{formatDate(r.created_at)}</td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => exportQuotePDF(r)} className="flex items-center gap-1 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-semibold text-brand hover:bg-brand-100"><FileDown size={14} /> PDF</button>
-                        <button onClick={() => exportQuoteDOCX(r)} className="flex items-center gap-1 rounded-lg bg-sky-50 px-2.5 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100"><FileDown size={14} /> Word</button>
+                        <button onClick={() => doExportPDF(r)} className="flex items-center gap-1 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-semibold text-brand hover:bg-brand-100"><FileDown size={14} /> PDF</button>
+                        <button onClick={() => doExportDOCX(r)} className="flex items-center gap-1 rounded-lg bg-sky-50 px-2.5 py-1.5 text-xs font-semibold text-sky-600 hover:bg-sky-100"><FileDown size={14} /> Word</button>
                         <button onClick={() => openEdit(r)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-ink"><Pencil size={15} /></button>
                         <button onClick={() => remove(r.id)} className="rounded-lg p-2 text-ink-faint hover:bg-rose-50 hover:text-rose-600"><Trash2 size={15} /></button>
                       </div>
