@@ -88,15 +88,19 @@ export default function Contracts() {
 
   const load = async () => {
     setLoading(true)
-    const [rr, pr, cr] = await Promise.all([
-      supabase.from('crm_contracts').select('*').order('created_at', { ascending: false }),
+    // Ưu tiên tải danh sách hợp đồng trước — hiện ngay
+    const rr = await supabase.from('crm_contracts').select('*').order('created_at', { ascending: false })
+    if (rr.error) console.error('Lỗi tải hợp đồng:', rr.error.message)
+    else setRows(rr.data || [])
+    setLoading(false)
+
+    // Dữ liệu phụ tải nền (chỉ cần khi mở form)
+    const [pr, cr] = await Promise.all([
       supabase.from('crm_products').select('*'),
       supabase.from('crm_customers').select('*'),
     ])
-    setRows(rr.data || [])
     setProducts(pr.data || [])
     setCustomers(cr.data || [])
-    setLoading(false)
   }
   useEffect(() => { load() }, [])
 

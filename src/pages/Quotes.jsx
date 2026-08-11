@@ -108,15 +108,25 @@ export default function Quotes() {
 
   const load = async () => {
     setLoading(true)
-    const [qr, pr, sr, cr] = await Promise.all([
-      supabase.from('crm_quotes').select('*').order('created_at', { ascending: false }),
+    // Ưu tiên tải DANH SÁCH BÁO GIÁ trước — hiện ngay, không chờ dữ liệu phụ
+    const qr = await supabase.from('crm_quotes').select('*').order('created_at', { ascending: false })
+    if (qr.error) {
+      console.error('Lỗi tải báo giá:', qr.error.message)
+      // Không ghi đè rows thành rỗng khi lỗi — giữ dữ liệu cũ nếu có
+    } else {
+      setRows(qr.data || [])
+    }
+    setLoading(false)
+
+    // Dữ liệu phụ (sản phẩm, set quà, khách hàng) chỉ cần khi mở form — tải nền, không chặn UI
+    const [pr, sr, cr] = await Promise.all([
       supabase.from('crm_products').select('*'),
       supabase.from('crm_gift_sets').select('*'),
       supabase.from('crm_customers').select('company_name, address, tax_code, contact_person, contact_email'),
     ])
-    if (sr.error) console.error('Lỗi tải set quà:', sr.error.message)
     if (pr.error) console.error('Lỗi tải sản phẩm:', pr.error.message)
-    setRows(qr.data || []); setProducts(pr.data || []); setSets(sr.data || []); setCustomers(cr.data || []); setLoading(false)
+    if (sr.error) console.error('Lỗi tải set quà:', sr.error.message)
+    setProducts(pr.data || []); setSets(sr.data || []); setCustomers(cr.data || [])
   }
   useEffect(() => { load() }, [])
 
