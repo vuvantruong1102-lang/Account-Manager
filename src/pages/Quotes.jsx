@@ -28,36 +28,30 @@ const newItem = () => ({
 
 // Chọn giá bậc theo số lượng: <=100 → t1, 101-300 → t2, >300 → t3.
 // SL < 10 vẫn dùng t1. Bậc trống thì lùi về base.
-function tierUnitPrice(src, qty) {
+// priceType: 'distributor' dùng giá NPP (d1/d2/d3), mặc định 'corporate' dùng t1/t2/t3
+// NPP thiếu bậc nào thì rơi về Corporate bậc đó, rồi mới tới base.
+function tierUnitPrice(src, qty, priceType = 'corporate') {
   const n = Number(qty) || 0
-  const pick = (t1, t2, t3, base) => {
-    let p
-    if (n > 300) p = t3
-    else if (n > 100) p = t2
-    else p = t1
-    p = (p === null || p === undefined || p === '') ? null : Number(p)
-    return (p == null || isNaN(p)) ? (Number(base) || 0) : p
-  }
+  const bracket = (a1, a2, a3) => (n > 310 ? a3 : n > 110 ? a2 : a1)
+  const norm = (p) => (p === null || p === undefined || p === '') ? null : Number(p)
   if (!src) return null
   if (src.kind === 'product') {
-    return Math.round(pick(src.t1, src.t2, src.t3, src.base))
+    const tCorp = bracket(src.t1, src.t2, src.t3)
+    const tDist = bracket(src.d1, src.d2, src.d3)
+    let p = priceType === 'distributor' ? norm(tDist) : null
+    if (p == null || isNaN(p)) p = norm(tCorp)            // NPP trống -> dùng Corporate
+    if (p == null || isNaN(p)) p = Number(src.base) || 0  // vẫn trống -> giá lẻ
+    return Math.round(p)
   }
   if (src.kind === 'set') {
-    // Giá set = tổng (đơn giá bậc của từng thành phần × qty thành phần trong 1 set)
-    // Bậc giá của mỗi thành phần chọn theo TỔNG số lượng thành phần đó = qty set × qty thành phần
     const total = (src.comps || []).reduce((sum, c) => {
       const compQty = Number(c.qty) || 1
       const compTotal = n * compQty
-      const pickQ = (t1, t2, t3, base) => {
-        let p
-        if (compTotal > 300) p = t3
-        else if (compTotal > 100) p = t2
-        else p = t1
-        p = (p === null || p === undefined || p === '') ? null : Number(p)
-        return (p == null || isNaN(p)) ? (Number(base) || 0) : p
-      }
-      const u = Math.round(pickQ(c.t1, c.t2, c.t3, c.base))
-      return sum + u * compQty
+      const br = (a1, a2, a3) => (compTotal > 310 ? a3 : compTotal > 110 ? a2 : a1)
+      let p = priceType === 'distributor' ? norm(br(c.d1, c.d2, c.d3)) : null
+      if (p == null || isNaN(p)) p = norm(br(c.t1, c.t2, c.t3))
+      if (p == null || isNaN(p)) p = Number(c.base) || 0
+      return sum + Math.round(p) * compQty
     }, 0)
     return Math.round(total)
   }
@@ -86,6 +80,7 @@ const EMPTY = {
   quote_number: '', company_name: '', address: '', tax_code: '',
   contact_person: '', contact_email: '', valid_until: '',
   vat_percent: 8, is_comparison: false,
+  customer_type: 'corporate',   // 'corporate' | 'distributor'
   intro: DEFAULT_INTRO,
   packaging_tier: 'Tùy chọn',
   packaging_text: '',
@@ -172,7 +167,7 @@ export default function Quotes() {
     const full = (r.items != null) ? r : await fetchFull(r.id)
     if (!full) return
     const items = (full.items?.length ? full.items : [newItem()]).map((it) => ({ ...newItem(), ...it }))
-    setForm({ ...EMPTY, ...full, intro: full.intro || DEFAULT_INTRO, notes: full.notes || DEFAULT_NOTES, packaging_tier: full.packaging_tier || 'Tùy chọn', packaging_text: full.packaging_text || (full.packaging_tier && PACKAGING_PRESETS[full.packaging_tier] ? PACKAGING_PRESETS[full.packaging_tier] : ''), items }); setEditId(full.id); setOpen(true)
+    setForm({ ...EMPTY, ...full, customer_type: full.customer_type || 'corporate', intro: full.intro || DEFAULT_INTRO, notes: full.notes || DEFAULT_NOTES, packaging_tier: full.packaging_tier || 'Tùy chọn', packaging_text: full.packaging_text || (full.packaging_tier && PACKAGING_PRESETS[full.packaging_tier] ? PACKAGING_PRESETS[full.packaging_tier] : ''), items }); setEditId(full.id); setOpen(true)
   }
 
   // Thành tiền mỗi dòng CHƯA VAT; VAT tính chung theo vat_percent của báo giá
@@ -204,12 +199,15 @@ export default function Quotes() {
       set_lines: it.kind === 'set' ? (it.set_lines || []) : [],
       set_desc: it.kind === 'set' ? (it.set_desc || '') : '',
       set_components: it.kind === 'set' ? (it.set_components || []) : [],
+      tier_source: it.tier_source || null,
+      price_manual: !!it.price_manual,
     }))
     const payload = {
       user_id: user.id, quote_number: form.quote_number, company_name: form.company_name,
       address: form.address, tax_code: form.tax_code, contact_person: form.contact_person,
       contact_email: form.contact_email, items: cleanItems,
       vat_percent: Number(form.vat_percent) || 0, discount: 0,
+      customer_type: form.customer_type || 'corporate',
       is_comparison: isComparison,
       intro: form.intro, notes: form.notes, valid_until: form.valid_until || null,
       packaging_tier: form.packaging_tier || 'Tùy chọn',
@@ -368,7 +366,7 @@ export default function Quotes() {
               {form.items.map((it, i) => (
                 <QuoteItemRow key={i} index={i} item={it} products={products} sets={sets}
                   onChange={(patch) => updateItem(i, patch)} onRemove={() => removeItem(i)}
-                  lineTotal={lineTotal(it)} />
+                  lineTotal={lineTotal(it)} customerType={form.customer_type} />
               ))}
             </div>
           </div>
@@ -412,8 +410,33 @@ export default function Quotes() {
             <textarea className="input-field min-h-[120px]" value={form.notes} onChange={set('notes')} placeholder="Điều khoản thanh toán, thời gian giao hàng, in logo..." />
           </div>
 
-          {/* Thuế suất VAT chung */}
+          {/* Loại báo giá + Thuế suất VAT chung */}
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-field">Loại báo giá (khung giá)</label>
+              <div className="flex gap-2">
+                {[['corporate', 'Corporate'], ['distributor', 'Nhà phân phối']].map(([val, lb]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => {
+                      // Đổi loại giá -> tính lại đơn giá tự động cho các dòng chưa sửa tay
+                      setForm((f) => ({
+                        ...f,
+                        customer_type: val,
+                        items: (f.items || []).map((it) => {
+                          if (it.price_manual || !it.tier_source) return it
+                          const auto = tierUnitPrice(it.tier_source, it.qty, val)
+                          return auto != null ? { ...it, price: auto } : it
+                        }),
+                      }))
+                    }}
+                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${form.customer_type === val ? 'bg-brand text-white' : 'bg-brand-50 text-brand hover:bg-brand-100'}`}
+                  >{lb}</button>
+                ))}
+              </div>
+              <p className="mt-1 text-[11px] text-ink-faint">Chọn khung giá áp dụng. Đổi loại sẽ tự cập nhật đơn giá các dòng (trừ dòng đã sửa tay).</p>
+            </div>
             <div>
               <label className="label-field">Thuế suất VAT (%)</label>
               <input className="input-field" type="number" value={form.vat_percent} onChange={set('vat_percent')} />
@@ -448,7 +471,7 @@ export default function Quotes() {
 }
 
 /* ---------- Một dòng mặt hàng trong báo giá ---------- */
-function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTotal }) {
+function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTotal, customerType = 'corporate' }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [q, setQ] = useState('')
   const boxRef = useRef(null)
@@ -460,9 +483,9 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
   }, [])
 
   const pickProduct = (p) => {
-    const src = { kind: 'product', base: Number(p.base_price) || 0, t1: p.price_t1, t2: p.price_t2, t3: p.price_t3 }
+    const src = { kind: 'product', base: Number(p.base_price) || 0, t1: p.price_t1, t2: p.price_t2, t3: p.price_t3, d1: p.price_d1, d2: p.price_d2, d3: p.price_d3 }
     const qty = Number(item.qty) || 1
-    const auto = tierUnitPrice(src, qty)
+    const auto = tierUnitPrice(src, qty, customerType)
     onChange({
       kind: 'product', ref_id: p.id,
       name: p.short_name || p.name, invoice_name: p.invoice_name || p.name, model: p.sku || '',
@@ -496,11 +519,14 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
         t1: c.price_t1 ?? p?.price_t1 ?? null,
         t2: c.price_t2 ?? p?.price_t2 ?? null,
         t3: c.price_t3 ?? p?.price_t3 ?? null,
+        d1: c.price_d1 ?? p?.price_d1 ?? null,
+        d2: c.price_d2 ?? p?.price_d2 ?? null,
+        d3: c.price_d3 ?? p?.price_d3 ?? null,
       }
     })
     const tierSrc = { kind: 'set', comps: tierComps }
     const setQty = Number(item.qty) || 1
-    const autoSet = tierUnitPrice(tierSrc, setQty)
+    const autoSet = tierUnitPrice(tierSrc, setQty, customerType)
     onChange({
       kind: 'set', ref_id: s.id,
       name: s.short_name || s.name, invoice_name: s.invoice_name || s.name, model: s.sku || '',
@@ -525,7 +551,7 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
     const qty = e.target.value
     const patch = { qty }
     if (!item.price_manual && item.tier_source) {
-      const auto = tierUnitPrice(item.tier_source, qty)
+      const auto = tierUnitPrice(item.tier_source, qty, customerType)
       if (auto != null) patch.price = auto
     }
     onChange(patch)
@@ -535,7 +561,7 @@ function QuoteItemRow({ index, item, products, sets, onChange, onRemove, lineTot
   // Nút khôi phục giá tự động theo bậc
   const resetTierPrice = () => {
     if (!item.tier_source) return
-    const auto = tierUnitPrice(item.tier_source, item.qty)
+    const auto = tierUnitPrice(item.tier_source, item.qty, customerType)
     onChange({ price: auto != null ? auto : item.price, price_manual: false })
   }
 
