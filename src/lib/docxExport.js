@@ -1,7 +1,7 @@
 // Xuất file .docx (Word / Google Docs) cho Hợp đồng, Phiếu xuất kho, Biên bản bàn giao, Báo giá
 // Dùng thư viện docx (chạy hoàn toàn trong trình duyệt) + file-saver để tải về.
 import {
-  Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+  Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell,
   WidthType, BorderStyle, AlignmentType, HeadingLevel, VerticalAlign,
 } from 'docx'
 import { saveAs } from 'file-saver'
@@ -148,19 +148,19 @@ export async function exportContractDOCX(data) {
     P('Độc lập - Tự do - Hạnh phúc', { align: AlignmentType.CENTER, bold: true, spacingAfter: 200 }),
     H('HỢP ĐỒNG MUA BÁN HÀNG HÓA'),
     P(`Số: ${data.contract_number || ''}`, { align: AlignmentType.CENTER, spacingAfter: 150 }),
-    P('- Căn cứ Bộ luật Dân sự và Luật Thương mại hiện hành của nước Cộng hòa xã hội chủ nghĩa Việt Nam;'),
+    P('- Căn cứ Bộ luật Dân sự số 91/2015/QH13 và các văn bản hướng dẫn thi hành;'),
+    P('- Căn cứ Luật Thương mại số 36/2005/QH11 và các văn bản sửa đổi, bổ sung, hướng dẫn thi hành;'),
     P('- Căn cứ nhu cầu mua hàng của Bên A và khả năng cung cấp hàng hóa của Bên B;'),
-    P(`Hôm nay, ngày ${dt.d} tháng ${String(dt.m).padStart(2, '0')} năm ${dt.y}, tại ${data.sign_place || 'Hà Nội'}, chúng tôi gồm có:`, { spacingAfter: 150 }),
+    P(`Hôm nay, ngày ${String(dt.d).padStart(2, '0')} tháng ${String(dt.m).padStart(2, '0')} năm ${dt.y}, tại ${data.sign_place || 'Hà Nội'}, chúng tôi gồm có:`, { spacingAfter: 150 }),
     // Bên A
-    PRuns([{ text: 'BÊN MUA (BÊN A)', bold: false }]),
-    info('BÊN MUA (BÊN A)', buyer.name, true),
+    info('BÊN MUA (BÊN A)', (buyer.name || '').toUpperCase(), true),
     info('Địa chỉ', buyer.address),
     info('Mã số thuế', buyer.tax_code),
     info('Người đại diện', buyer.rep_name),
     info('Chức vụ', buyer.rep_title),
     new Paragraph({ spacing: { after: 80 }, children: [] }),
     // Bên B
-    info('BÊN BÁN (BÊN B)', seller.name, true),
+    info('BÊN BÁN (BÊN B)', (seller.name || '').toUpperCase(), true),
     info('Địa chỉ', seller.address),
     info('Mã số thuế', seller.tax_code),
     info('Người đại diện', seller.rep_name),
@@ -197,7 +197,7 @@ export async function exportContractDOCX(data) {
   children.push(P('ĐIỀU 3. GIAO HÀNG VÀ NGHIỆM THU', { bold: true }))
   const c31 = C.clause_3_1 || `Bên B giao hàng ${data.delivery_time || 'không muộn hơn ngày ……/……/……'}, với điều kiện đã nhận đủ khoản thanh toán lần 1 và Bên A xác nhận mẫu cuối cùng đúng thời hạn. Nếu Bên A chậm thanh toán, chậm cung cấp thông tin hoặc chậm duyệt mẫu, thời hạn giao hàng được gia hạn tương ứng.`
   children.push(P('3.1. ' + c31))
-  children.push(P(`3.2. Địa điểm giao hàng: ${data.delivery_address || '……'}. ${data.shipping_by || 'Chi phí vận chuyển do Bên B chịu.'}`))
+  children.push(P(`3.2. Địa điểm giao hàng: ${data.delivery_address || '……………………………………………………'}. ${data.shipping_by || 'Chi phí vận chuyển do Bên B chịu.'}`))
   children.push(P('3.3. ' + (C.clause_3_3 || DEFAULT_CLAUSES.clause_3_3)))
   children.push(P('3.4. ' + (C.clause_3_4 || DEFAULT_CLAUSES.clause_3_4), { spacingAfter: 150 }))
   // Điều 4-8
@@ -235,11 +235,103 @@ export async function exportContractDOCX(data) {
   children.push(new Paragraph({ spacing: { after: 200 }, children: [] }))
   children.push(sigTable)
 
+  // Phụ lục (nếu có) — trang mới, kèm ảnh minh họa
+  if (data.has_appendix) {
+    const appx = await buildAppendixChildren(data)
+    appx.forEach((p) => children.push(p))
+  }
+
   const doc = new Document({
     styles: { default: { document: { run: { font: FONT, size: 24 } } } },
     sections: [{ properties: { page: { margin: { top: 1000, bottom: 1000, left: 1100, right: 1100 } } }, children }],
   })
   await download(doc, `HopDong_${(data.contract_number || 'HD').replace(/\//g, '-')}.docx`)
+}
+
+/* ---- Phụ lục hợp đồng cho bản Word (khớp bản PDF) ---- */
+// Lấy kích thước thật của ảnh từ data URL (chạy trong trình duyệt)
+const imgNaturalSize = (src) => new Promise((resolve) => {
+  try {
+    const im = new Image()
+    im.onload = () => resolve({ w: im.naturalWidth || 0, h: im.naturalHeight || 0 })
+    im.onerror = () => resolve(null)
+    im.src = src
+  } catch { resolve(null) }
+})
+
+// Tạo Paragraph chứa ảnh, canh giữa, cùng tỉ lệ phóng to như bản PDF (tối đa 160×190 mm ≈ 605×718 px @96dpi)
+async function buildImageParagraph(dataUrl) {
+  try {
+    const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,([\s\S]*)$/.exec(String(dataUrl || ''))
+    if (!m) return null
+    const mime = m[1].toLowerCase()
+    const b64 = m[2]
+    const type = mime.includes('png') ? 'png'
+      : (mime.includes('jpeg') || mime.includes('jpg')) ? 'jpg'
+      : mime.includes('gif') ? 'gif'
+      : mime.includes('bmp') ? 'bmp' : 'png'
+
+    const MAX_W = 605, MAX_H = 718 // px (~160×190 mm, gấp đôi bản cũ)
+    const dim = await imgNaturalSize(dataUrl)
+    const w0 = (dim && dim.w) || 600
+    const h0 = (dim && dim.h) || 400
+    const ratio = Math.min(MAX_W / w0, MAX_H / h0)
+    const width = Math.max(1, Math.round(w0 * ratio))
+    const height = Math.max(1, Math.round(h0 * ratio))
+
+    const bin = atob(b64)
+    const bytes = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+
+    return new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 60, after: 80 },
+      children: [new ImageRun({ type, data: bytes, transformation: { width, height } })],
+    })
+  } catch (e) {
+    console.error('Ảnh phụ lục (docx) lỗi:', e)
+    return null
+  }
+}
+
+async function buildAppendixChildren(data) {
+  const out = []
+  const dmyStr = (d) => { const x = dmy(d); return `${String(x.d).padStart(2, '0')}/${String(x.m).padStart(2, '0')}/${x.y}` }
+  const sigDate = data.signed_at || data.created_at
+
+  // Tiêu đề phụ lục sang trang mới
+  out.push(new Paragraph({
+    alignment: AlignmentType.CENTER, pageBreakBefore: true, spacing: { after: 120 },
+    children: [new TextRun({ text: 'PHỤ LỤC HỢP ĐỒNG', bold: true, size: 32, font: FONT })],
+  }))
+  out.push(new Paragraph({
+    alignment: AlignmentType.CENTER, spacing: { after: 200 },
+    children: [new TextRun({ text: data.appendix_subtitle || 'V/v: Quy cách in logo và đóng gói sản phẩm', bold: true, size: 26, font: FONT })],
+  }))
+  out.push(P(`Phụ lục này là một phần không tách rời của Hợp đồng số: ${data.contract_number || ''}${sigDate ? `, ký ngày ${dmyStr(sigDate)}` : ''}.`))
+  out.push(P('Hai bên thống nhất quy cách thực hiện như sau:', { spacingAfter: 150 }))
+
+  const sections = data.appendix_sections || []
+  for (let idx = 0; idx < sections.length; idx++) {
+    const sec = sections[idx] || {}
+    out.push(P(`${idx + 1}. ${sec.title || ''}`, { bold: true }))
+    ;(sec.bullets || []).map((b) => String(b || '').trim()).filter(Boolean).forEach((b) => out.push(P('●  ' + b, { indent: 300 })))
+    if (sec.text) out.push(P(sec.text))
+    if (sec.image) {
+      const imgPara = await buildImageParagraph(sec.image)
+      if (imgPara) {
+        out.push(imgPara)
+        if (sec.caption) {
+          out.push(new Paragraph({
+            alignment: AlignmentType.CENTER, spacing: { after: 120 },
+            children: [new TextRun({ text: sec.caption, italics: true, size: 19, font: FONT, color: '46464C' })],
+          }))
+        }
+      }
+    }
+    out.push(new Paragraph({ spacing: { after: 80 }, children: [] }))
+  }
+  return out
 }
 
 /* ============ Thông tin dùng cho PXK / BBBG / Báo giá ============ */

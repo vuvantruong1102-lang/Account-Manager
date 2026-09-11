@@ -365,7 +365,7 @@ function renderAppendix(doc, data, ctx) {
     if (sec.image) {
       try {
         const props = doc.getImageProperties(sec.image)
-        const maxW = 80, maxH = 95
+        const maxW = 160, maxH = 190
         let iw = props.width, ih = props.height
         const ratio = Math.min(maxW / iw, maxH / ih)
         iw *= ratio; ih *= ratio
