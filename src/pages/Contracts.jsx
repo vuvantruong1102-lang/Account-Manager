@@ -6,7 +6,7 @@ import { formatVND, formatDate } from '../lib/constants'
 import { docSoThanhChu } from '../lib/numberToWords'
 import { Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
 import { exportContractPDF, DEFAULT_SELLER, DEFAULT_CLAUSES } from '../lib/contractPdf'
-import { exportContractDOCX, exportWarehouseDOCX, exportDeliveryDOCX } from '../lib/docxExport'
+import { exportContractDOCX, exportWarehouseDOCX, exportDeliveryDOCX, exportPaymentDOCX } from '../lib/docxExport'
 import { exportWarehousePDF, exportDeliveryPDF } from '../lib/warehousePdf'
 import { exportPaymentPDF, DEFAULT_PAYMENT_NOTES, DEFAULT_PAYMENT_ORDER_DESC } from '../lib/paymentPdf'
 
@@ -356,7 +356,7 @@ export default function Contracts() {
         if (kind === 'contract') exportContractDOCX(saved)
         else if (kind === 'warehouse') exportWarehouseDOCX(toWarehouseData(saved))
         else if (kind === 'delivery') exportDeliveryDOCX(toWarehouseData(saved))
-        else if (kind === 'payment') exportPaymentPDF(toPaymentData(saved)) // DNTT giữ PDF
+        else if (kind === 'payment') exportPaymentDOCX(toPaymentData(saved))
         return
       }
       if (kind === 'contract') exportContractPDF(saved)
@@ -417,7 +417,8 @@ export default function Contracts() {
                       <button onClick={() => exportContractDOCX(r)} className="rounded-lg px-2 py-1 text-xs font-semibold text-ink-faint hover:bg-paper hover:text-sky-600" title="Xuất Hợp đồng (Word .docx)">HĐ·W</button>
                       <button onClick={() => exportWarehousePDF(toWarehouseData(r))} className="rounded-lg px-2 py-1 text-xs font-semibold text-ink-faint hover:bg-paper hover:text-brand" title="Phiếu xuất kho">PXK</button>
                       <button onClick={() => exportDeliveryPDF(toWarehouseData(r))} className="rounded-lg px-2 py-1 text-xs font-semibold text-ink-faint hover:bg-paper hover:text-brand" title="Biên bản bàn giao">BBBG</button>
-                      <button onClick={() => exportPaymentPDF(toPaymentData(r))} className="rounded-lg px-2 py-1 text-xs font-semibold text-ink-faint hover:bg-paper hover:text-brand" title="Đề nghị thanh toán">DNTT</button>
+                      <button onClick={() => exportPaymentPDF(toPaymentData(r))} className="rounded-lg px-2 py-1 text-xs font-semibold text-ink-faint hover:bg-paper hover:text-brand" title="Đề nghị thanh toán (PDF)">DNTT</button>
+                      <button onClick={() => exportPaymentDOCX(toPaymentData(r))} className="rounded-lg px-2 py-1 text-xs font-semibold text-ink-faint hover:bg-paper hover:text-sky-600" title="Đề nghị thanh toán (Word .docx)">DNTT·W</button>
                       <button onClick={() => openEdit(r)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-ink"><Pencil size={15} /></button>
                       <button onClick={() => remove(r.id)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-rose-600"><Trash2 size={15} /></button>
                     </div>
@@ -718,9 +719,14 @@ export default function Contracts() {
                 <p className="text-xl font-bold text-ink">{formatVND((form.payment_amount !== '' && form.payment_amount != null) ? Number(form.payment_amount) : grand)}</p>
                 <p className="text-xs italic text-ink-faint">{docSoThanhChu((form.payment_amount !== '' && form.payment_amount != null) ? Number(form.payment_amount) : grand)}</p>
               </div>
-              <button type="button" className="btn-primary disabled:opacity-50" disabled={saving} onClick={() => saveAndExport('payment')}>
-                <FileText size={16} className="mr-1.5 inline" />{saving ? 'Đang lưu…' : 'Tạo Đề nghị thanh toán'}
-              </button>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button type="button" className="rounded-lg border border-sky-500 px-4 py-2 text-sm font-semibold text-sky-600 hover:bg-sky-50 disabled:opacity-50" disabled={saving} onClick={() => saveAndExport('payment', 'docx')}>
+                  <FileText size={16} className="mr-1.5 inline" />{saving ? 'Đang lưu…' : 'Tạo & Xuất Word'}
+                </button>
+                <button type="button" className="btn-primary disabled:opacity-50" disabled={saving} onClick={() => saveAndExport('payment')}>
+                  <FileText size={16} className="mr-1.5 inline" />{saving ? 'Đang lưu…' : 'Tạo Đề nghị thanh toán (PDF)'}
+                </button>
+              </div>
             </div>
           </div>
         )}

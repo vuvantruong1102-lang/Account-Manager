@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, X, ReceiptText, Pencil, Package } from 'lucide-react'
+import { Plus, Trash2, X, ReceiptText, Pencil, Package, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { formatVND, formatDate } from '../lib/constants'
 import { Modal, EmptyState, Spinner, PageHeader } from '../components/ui'
 import { exportPaymentPDF, DEFAULT_PAYMENT_NOTES, DEFAULT_PAYMENT_ORDER_DESC } from '../lib/paymentPdf'
+import { exportPaymentDOCX } from '../lib/docxExport'
 import { docSoThanhChu } from '../lib/numberToWords'
 
 const newLine = () => ({ name: '', qty: 1, unit: 'Cái', price: 0 })
@@ -97,7 +98,7 @@ export default function PaymentRequest() {
 
   const total = form.items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0)
 
-  const save = async () => {
+  const save = async (format = 'pdf') => {
     if (!form.company_name.trim()) { alert('Nhập tên công ty (Kính gửi)'); return }
     const items = form.items.filter((it) => it.name).map((it) => ({
       name: it.name, qty: Number(it.qty) || 0, unit: it.unit || '', price: Number(it.price) || 0,
@@ -130,7 +131,10 @@ export default function PaymentRequest() {
     if (res.error) { alert('Lưu thất bại: ' + res.error.message); return }
     const saved = res.data || payload
     setOpen(false); load()
-    setTimeout(() => exportPaymentPDF(toPdfData(saved)), 100)
+    setTimeout(() => {
+      if (format === 'docx') exportPaymentDOCX(toPdfData(saved))
+      else exportPaymentPDF(toPdfData(saved))
+    }, 100)
   }
 
   // Chuẩn hóa dữ liệu cho hàm xuất PDF
@@ -193,6 +197,7 @@ export default function PaymentRequest() {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => exportPaymentPDF(toPdfData(r))} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-brand" title="Xuất PDF"><ReceiptText size={15} /></button>
+                        <button onClick={() => exportPaymentDOCX(toPdfData(r))} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-sky-600" title="Xuất Word (.docx) để chỉnh sửa"><FileText size={15} /></button>
                         <button onClick={() => openEdit(r)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-ink"><Pencil size={15} /></button>
                         <button onClick={() => remove(r.id)} className="rounded-lg p-2 text-ink-faint hover:bg-paper hover:text-rose-600"><Trash2 size={15} /></button>
                       </div>
@@ -304,9 +309,10 @@ export default function PaymentRequest() {
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
           <button className="btn-ghost" onClick={() => setOpen(false)}>Hủy</button>
-          <button className="btn-primary" onClick={save}>{editId ? 'Lưu & Xuất PDF' : 'Tạo & Xuất PDF'}</button>
+          <button className="rounded-lg border border-sky-500 px-4 py-2 text-sm font-semibold text-sky-600 hover:bg-sky-50" onClick={() => save('docx')}>{editId ? 'Lưu & Xuất Word' : 'Tạo & Xuất Word'}</button>
+          <button className="btn-primary" onClick={() => save('pdf')}>{editId ? 'Lưu & Xuất PDF' : 'Tạo & Xuất PDF'}</button>
         </div>
       </Modal>
     </div>
