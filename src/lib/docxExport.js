@@ -337,7 +337,7 @@ async function buildAppendixChildren(data) {
 /* ============ Thông tin dùng cho PXK / BBBG / Báo giá ============ */
 const SELLER_INFO = {
   name: 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ VÀ SẢN XUẤT VNF VIỆT NAM',
-  address: 'Tổ dân phố Phú Mỹ 3, phường Bắc Giang, tỉnh Bắc Ninh, Việt Nam',
+  address: 'Tổ dân phố Phú Mỹ 3, phường Bắc Giang, Thành phố Bắc Ninh, Việt Nam',
   office: 'VPĐD tại Hà Nội: 18LK19, KĐT Văn Khê, phường Hà Đông, TP Hà Nội',
   taxCode: '2400883385',
   account: '19135661522015',

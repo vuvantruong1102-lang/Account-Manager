@@ -8,7 +8,7 @@ const SOFT = [70, 76, 90]
 
 const SELLER = {
   name: 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ VÀ SẢN XUẤT VNF VIỆT NAM',
-  address: 'Tổ dân phố Phú Mỹ 3, Phường Bắc Giang, Tỉnh Bắc Ninh, Việt Nam',
+  address: 'Tổ dân phố Phú Mỹ 3, Phường Bắc Giang, Thành phố Bắc Ninh, Việt Nam',
   taxCode: '2400883385',
   bank: '19135661522015 tại Ngân hàng Thương mại cổ phần Kỹ thương Việt Nam – Chi nhánh Bắc Giang',
 }

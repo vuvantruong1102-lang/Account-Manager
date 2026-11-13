@@ -11,7 +11,7 @@ const SOFT = [91, 97, 112]
 
 const SELLER = {
   name: 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ VÀ SẢN XUẤT VNF VIỆT NAM',
-  address: 'Tổ dân phố Phú Mỹ 3, phường Bắc Giang, tỉnh Bắc Ninh',
+  address: 'Tổ dân phố Phú Mỹ 3, phường Bắc Giang, Thành phố Bắc Ninh',
   office: 'VPĐD tại Hà Nội: 18 liền kề 19, khu đô thị Văn Khê, phường Hà Đông, TP Hà Nội',
   taxCode: '2400833385',
   phone: '0822 838 665',

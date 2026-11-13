@@ -9,7 +9,7 @@ const SOFT = [70, 76, 90]
 // Bên bán mặc định (VNF)
 export const DEFAULT_SELLER = {
   name: 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ VÀ SẢN XUẤT VNF VIỆT NAM',
-  address: 'Tổ dân phố Phú Mỹ 3, phường Bắc Giang, tỉnh Bắc Ninh, Việt Nam',
+  address: 'Tổ dân phố Phú Mỹ 3, phường Bắc Giang, Thành phố Bắc Ninh, Việt Nam',
   tax_code: '2400883385',
   account: '19135661522015',
   bank: 'Ngân hàng TMCP Kỹ Thương Việt Nam (Techcombank) - Chi nhánh Bắc Giang',
