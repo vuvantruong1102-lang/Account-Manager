@@ -525,3 +525,139 @@ export async function exportQuoteDOCX(quote) {
   const doc = new Document({ styles: { default: { document: { run: { font: FONT, size: 24 } } } }, sections: [{ properties: { page: { margin: { top: 1000, bottom: 1000, left: 1100, right: 1100 } } }, children }] })
   await download(doc, `BaoGia_${(quote.quote_number || 'BG').replace(/\//g, '-')}.docx`)
 }
+
+/* ============ 5. GIẤY ĐỀ NGHỊ THANH TOÁN ============ */
+// Tách 1 dòng markdown (**đậm** / *nghiêng*) thành các run cho Word
+const mdToRuns = (line) => {
+  const runs = []
+  const re = /(\*\*[^*]+\*\*|\*[^*]+\*)/g
+  let last = 0, m
+  while ((m = re.exec(line)) !== null) {
+    if (m.index > last) runs.push({ text: line.slice(last, m.index) })
+    const t = m[0]
+    if (t.startsWith('**')) runs.push({ text: t.slice(2, -2), bold: true })
+    else runs.push({ text: t.slice(1, -1), italics: true })
+    last = m.index + t.length
+  }
+  if (last < line.length) runs.push({ text: line.slice(last) })
+  return runs.length ? runs : [{ text: line }]
+}
+// Ô tiêu đề bảng hỗ trợ xuống dòng (vd "Đơn giá\n(Đã có VAT)")
+const headCell = (text, opt = {}) => {
+  const { width } = opt
+  return new TableCell({
+    width: width ? { size: width, type: WidthType.DXA } : undefined,
+    verticalAlign: VerticalAlign.CENTER,
+    shading: { fill: 'F2F2F2' },
+    margins: { top: 40, bottom: 40, left: 60, right: 60 },
+    children: String(text).split('\n').map((ln) => new Paragraph({
+      alignment: AlignmentType.CENTER, spacing: { after: 0, line: 252 },
+      children: [new TextRun({ text: ln, bold: true, size: 20, font: FONT })],
+    })),
+  })
+}
+
+export async function exportPaymentDOCX(req) {
+  const dt = dmy(req.created_at)
+  const items = req.items || []
+  const showItems = req.show_items !== false
+  const rate = req.use_vat !== false ? (Number(req.vat_percent) || 0) : 0
+  const vatMul = 1 + rate / 100
+  const roundTiny = (n) => { const near = Math.round(n / 1000) * 1000; return Math.abs(n - near) <= 3 ? near : Math.round(n) }
+  const unitVat = (it) => roundTiny((Number(it.price) || 0) * vatMul)   // đơn giá có VAT, làm tròn về bội 1.000 nếu gần
+  const lineVat = (it) => unitVat(it) * (Number(it.qty) || 0)
+  const total = items.reduce((s, it) => s + lineVat(it), 0)
+  const requestAmount = (req.amount != null && req.amount !== '') ? Number(req.amount) : total
+  const amountWords = docSoThanhChu(requestAmount).replace(/\.$/, '')
+
+  const hasBuyerExtra = req.address || req.tax_code
+  const children = [
+    // Header người bán
+    P(SELLER_INFO.name, { bold: true, align: AlignmentType.LEFT, spacingAfter: 0, size: 20 }),
+    P(`Địa chỉ: ${SELLER_INFO.address}`, { align: AlignmentType.LEFT, spacingAfter: 0, size: 18 }),
+    P(SELLER_INFO.office, { align: AlignmentType.LEFT, spacingAfter: 0, size: 18 }),
+    P(`MST: ${SELLER_INFO.taxCode}  •  ĐT: ${SELLER_INFO.phone}  •  Email: ${SELLER_INFO.email}`, { align: AlignmentType.LEFT, spacingAfter: 140, size: 18 }),
+    // Ngày (căn phải, in nghiêng)
+    new Paragraph({
+      alignment: AlignmentType.RIGHT, spacing: { after: 180, line: 276 },
+      children: [new TextRun({ text: `Hà Nội, ngày ${String(dt.d).padStart(2, '0')} tháng ${String(dt.m).padStart(2, '0')} năm ${dt.y}`, italics: true, size: 23, font: FONT })],
+    }),
+    H('GIẤY ĐỀ NGHỊ THANH TOÁN'),
+    P(`Số ${req.doc_number || 'DN03'}`, { align: AlignmentType.CENTER, spacingAfter: 220 }),
+    // Kính gửi
+    PRuns([{ text: 'Kính gửi: ', bold: true }, { text: (req.company_name || '').toUpperCase(), bold: true }], { align: AlignmentType.LEFT, spacingAfter: hasBuyerExtra ? 40 : 120 }),
+  ]
+  if (req.address) children.push(P(`Địa chỉ: ${req.address}`, { align: AlignmentType.LEFT, spacingAfter: 40 }))
+  if (req.tax_code) children.push(P(`MST: ${req.tax_code}`, { align: AlignmentType.LEFT, spacingAfter: 120 }))
+
+  // Căn cứ / order_desc (hỗ trợ markdown **đậm**/*nghiêng*)
+  if (req.order_desc && req.order_desc.trim()) {
+    req.order_desc.split('\n').map((s) => s.trim()).filter(Boolean).forEach((ln) => {
+      children.push(PRuns(mdToRuns(ln), { spacingAfter: 80 }))
+    })
+    children.push(new Paragraph({ spacing: { after: 40 }, children: [] }))
+  }
+
+  // Bảng mặt hàng (có thể ẩn) — đơn giá & thành tiền đã gồm VAT
+  if (showItems && items.length) {
+    const headRow = new TableRow({ tableHeader: true, children: [
+      headCell('STT'), headCell('Tên mặt hàng'), headCell('Số lượng'), headCell('Đơn vị'),
+      headCell('Đơn giá\n(Đã có VAT)'), headCell('Thành tiền\n(Đã có VAT)'),
+    ] })
+    const bodyRows = items.map((it, i) => new TableRow({ children: [
+      cell(String(i + 1), { align: AlignmentType.CENTER, size: 20 }),
+      cell(it.name || '', { size: 20 }),
+      cell(fmt(it.qty), { align: AlignmentType.CENTER, size: 20 }),
+      cell(it.unit || '', { align: AlignmentType.CENTER, size: 20 }),
+      cell(fmt(unitVat(it)), { align: AlignmentType.RIGHT, size: 20 }),
+      cell(fmt(lineVat(it)), { align: AlignmentType.RIGHT, size: 20 }),
+    ] }))
+    const tblRows = [headRow, ...bodyRows]
+    if (items.length > 1) {
+      tblRows.push(new TableRow({ children: [
+        new TableCell({ columnSpan: 5, margins: { top: 40, bottom: 40, left: 60, right: 60 }, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'TỔNG CỘNG', bold: true, size: 20, font: FONT })] })] }),
+        cell(fmt(total), { align: AlignmentType.RIGHT, bold: true, size: 20 }),
+      ] }))
+    }
+    children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: thinBorders, columnWidths: [700, 3400, 1100, 1000, 1600, 1700], rows: tblRows }))
+    children.push(new Paragraph({ spacing: { after: 140 }, children: [] }))
+  }
+
+  // Nội dung chính — thay {bằng_số}/{bằng_chữ}, trình bày Bằng số/Bằng chữ + tài khoản
+  let notesRaw = (req.notes && req.notes.trim()) ? req.notes : ''
+  notesRaw = notesRaw.replace(/\{bằng_số\}/g, fmt(requestAmount)).replace(/\{bằng_chữ\}/g, amountWords)
+  const isSoLine = (l) => /^Bằng số:/i.test(l.trim())
+  const isChuLine = (l) => /^Bằng chữ:/i.test(l.trim())
+  notesRaw.split('\n').forEach((raw) => {
+    const l = raw.replace(/\r/g, '')
+    if (l.trim() === '') { children.push(new Paragraph({ spacing: { after: 90 }, children: [] })); return }
+    if (isSoLine(l) || isChuLine(l)) {
+      const label = isSoLine(l) ? 'Bằng số:' : 'Bằng chữ:'
+      let val = l.replace(/^Bằng (số|chữ):\s*/i, '').trim()
+      if (!val) val = isSoLine(l) ? `${fmt(requestAmount)} VNĐ` : amountWords
+      if (isSoLine(l) && !/VNĐ|VND/i.test(val)) val += ' VNĐ'
+      children.push(PRuns([{ text: label + ' ' }, { text: val, bold: true }], { indent: 300, spacingAfter: 60 }))
+      return
+    }
+    children.push(P(l, { spacingAfter: 60 }))
+  })
+  children.push(new Paragraph({ spacing: { after: 200 }, children: [] }))
+
+  // Chữ ký — cụm căn giữa ở cột phải (bảng không viền)
+  const noBorder = { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } }
+  const sigTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE }, borders: noBorder, columnWidths: [5000, 4500],
+    rows: [new TableRow({ children: [
+      new TableCell({ borders: noBorder, children: [new Paragraph({ children: [] })] }),
+      new TableCell({ borders: noBorder, children: [
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: SIGNER.title, bold: true, size: 24, font: FONT })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: '(Ký, ghi rõ họ tên, đóng dấu)', italics: true, size: 20, font: FONT })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 700 }, children: [new TextRun({ text: SIGNER.name, bold: true, size: 24, font: FONT })] }),
+      ] }),
+    ] })],
+  })
+  children.push(sigTable)
+
+  const doc = new Document({ styles: { default: { document: { run: { font: FONT, size: 24 } } } }, sections: [{ properties: { page: { margin: { top: 1000, bottom: 1000, left: 1100, right: 1100 } } }, children }] })
+  await download(doc, `DNTT_VNF_${(req.doc_number || 'DN03').replace(/\//g, '-')}.docx`)
+}
